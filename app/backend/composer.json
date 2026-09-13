@@ -1,0 +1,30 @@
+{
+    "name": "mroczect/galonku-backend",
+    "description": "Backend API Galonku - Aplikasi Pengelolaan Depot Air",
+    "type": "project",
+    "license": "GPL-3.0-only",
+    "authors": [
+        {
+            "name": "mroczect",
+            "email": "mroczect@proton.me"
+        }
+    ],
+    "require": {
+        "vlucas/phpdotenv": "^5.7",
+        "firebase/php-jwt": "^7.1",
+        "monolog/monolog": "^3.12"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.3",
+        "fakerphp/faker": "^1.24"
+    },
+    "scripts": {
+        "serve": "\"php -S localhost:8000 -t public\"",
+        "lint": "\"find src -name \\\"*.php\\\" -exec php -l {} \\\\;\"",
+        "test": "\"phpunit\""
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
