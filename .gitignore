@@ -13,6 +13,7 @@
 !/tmp/sessions/empty
 /tmp/tests/*
 !/tmp/tests/empty
+tmp/
 
 /logs/*
 !/logs/empty
@@ -23,3 +24,7 @@
 /app/Config/core.php
 /app/Config/database.php
 /vendors/*
+
+.velodiff_dist.diff
+.snapcat.md
+pull_request_body.md
