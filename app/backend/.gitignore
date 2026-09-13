@@ -6,7 +6,10 @@
 /storage/uploads/*
 !storage/**/.gitkeep
 
-composer.lock
 .phpunit.result.cache
 .idea/
 .vscode/
+
+*.sql.bak
+*.dump.sql
+backup_*.sql
