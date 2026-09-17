@@ -1,83 +1,99 @@
-import { useEffect, useState } from 'react'
-import { customersApi } from '../api/customers'
-import { useAuth } from '../contexts/AuthContext'
+import { useEffect, useState } from "react";
+import { customersApi } from "../api/customers";
+import { useAuth } from "../contexts/AuthContext";
 import {
-  Button, Input, Card, PageHeader, EmptyState, Loading
-} from '../components/ui'
-import toast from 'react-hot-toast'
-import { Plus, Pencil, Trash2, Users, X } from 'lucide-react'
+  Button,
+  Input,
+  Card,
+  PageHeader,
+  EmptyState,
+  Loading,
+} from "../components/ui";
+import toast from "react-hot-toast";
+import { Plus, Pencil, Trash2, Users, X } from "lucide-react";
 
 export default function Customers() {
-  const { user } = useAuth()
-  const isAdmin = user?.role_name === 'admin'
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '' })
+  const { user } = useAuth();
+  const isAdmin = user?.role_name === "admin";
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    notes: "",
+  });
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await customersApi.list({ per_page: 100 })
-      setItems(res.data.data || [])
+      const res = await customersApi.list({ per_page: 100 });
+      setItems(res.data.data || []);
     } catch {
-      toast.error('Gagal memuat pelanggan')
+      toast.error("Gagal memuat pelanggan");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load();
+  }, []);
 
   const openCreate = () => {
-    setEditing(null)
-    setForm({ name: '', phone: '', address: '', notes: '' })
-    setShowForm(true)
-  }
+    setEditing(null);
+    setForm({ name: "", phone: "", address: "", notes: "" });
+    setShowForm(true);
+  };
 
   const openEdit = (c) => {
-    setEditing(c)
+    setEditing(c);
     setForm({
       name: c.name,
       phone: c.phone,
-      address: c.address || '',
-      notes: c.notes || '',
-    })
-    setShowForm(true)
-  }
+      address: c.address || "",
+      notes: c.notes || "",
+    });
+    setShowForm(true);
+  };
 
   const submit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      if (editing) await customersApi.update(editing.id, form)
-      else await customersApi.create(form)
-      toast.success(editing ? 'Pelanggan diperbarui' : 'Pelanggan ditambahkan')
-      setShowForm(false)
-      setEditing(null)
-      load()
+      if (editing) await customersApi.update(editing.id, form);
+      else await customersApi.create(form);
+      toast.success(editing ? "Pelanggan diperbarui" : "Pelanggan ditambahkan");
+      setShowForm(false);
+      setEditing(null);
+      load();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Gagal menyimpan')
+      toast.error(err.response?.data?.message || "Gagal menyimpan");
     }
-  }
+  };
 
   const remove = async (id) => {
-    if (!confirm('Nonaktifkan pelanggan ini?')) return
+    if (!confirm("Nonaktifkan pelanggan ini?")) return;
     try {
-      await customersApi.remove(id)
-      toast.success('Pelanggan dinonaktifkan')
-      load()
+      await customersApi.remove(id);
+      toast.success("Pelanggan dinonaktifkan");
+      load();
     } catch {
-      toast.error('Gagal')
+      toast.error("Gagal");
     }
-  }
+  };
 
   return (
     <div>
       <PageHeader
         title="Pelanggan"
         description="Kelola data pelanggan depot"
-        action={<Button icon={Plus} onClick={openCreate}>Tambah pelanggan</Button>}
+        action={
+          <Button icon={Plus} onClick={openCreate}>
+            Tambah pelanggan
+          </Button>
+        }
       />
 
       <Card className="overflow-hidden">
@@ -88,7 +104,11 @@ export default function Customers() {
             icon={Users}
             title="Belum ada pelanggan"
             description="Tambahkan pelanggan pertama untuk memulai"
-            action={<Button icon={Plus} onClick={openCreate}>Tambah pelanggan</Button>}
+            action={
+              <Button icon={Plus} onClick={openCreate}>
+                Tambah pelanggan
+              </Button>
+            }
           />
         ) : (
           <table className="w-full text-sm">
@@ -104,11 +124,15 @@ export default function Customers() {
               {items.map((c) => (
                 <tr
                   key={c.id}
-                  className={`hover:bg-stone-50/50 transition ${!c.is_active ? 'opacity-40' : ''}`}
+                  className={`hover:bg-stone-50/50 transition ${!c.is_active ? "opacity-40" : ""}`}
                 >
-                  <td className="px-5 py-3 font-medium text-stone-900">{c.name}</td>
+                  <td className="px-5 py-3 font-medium text-stone-900">
+                    {c.name}
+                  </td>
                   <td className="px-5 py-3 text-stone-600">{c.phone}</td>
-                  <td className="px-5 py-3 text-stone-500">{c.address || '—'}</td>
+                  <td className="px-5 py-3 text-stone-500">
+                    {c.address || "—"}
+                  </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex justify-end gap-1">
                       <button
@@ -139,7 +163,7 @@ export default function Customers() {
           <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
             <div className="px-6 py-4 border-b border-stone-200 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-stone-900">
-                {editing ? 'Edit pelanggan' : 'Tambah pelanggan'}
+                {editing ? "Edit pelanggan" : "Tambah pelanggan"}
               </h2>
               <button
                 onClick={() => setShowForm(false)}
@@ -174,7 +198,7 @@ export default function Customers() {
 
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="flex-1">
-                  {editing ? 'Simpan perubahan' : 'Tambah'}
+                  {editing ? "Simpan perubahan" : "Tambah"}
                 </Button>
                 <Button
                   type="button"
@@ -189,5 +213,5 @@ export default function Customers() {
         </div>
       )}
     </div>
-  )
+  );
 }

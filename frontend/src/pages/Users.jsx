@@ -1,44 +1,51 @@
-import { useEffect, useState } from 'react'
-import { usersApi } from '../api/users'
+import { useEffect, useState } from "react";
+import { usersApi } from "../api/users";
 import {
-  Button, Card, Badge, PageHeader, EmptyState, Loading
-} from '../components/ui'
-import toast from 'react-hot-toast'
-import { Shield } from 'lucide-react'
+  Button,
+  Card,
+  Badge,
+  PageHeader,
+  EmptyState,
+  Loading,
+} from "../components/ui";
+import toast from "react-hot-toast";
+import { Shield } from "lucide-react";
 
 export default function Users() {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await usersApi.list({ per_page: 100 })
-      setItems(res.data.data || [])
+      const res = await usersApi.list({ per_page: 100 });
+      setItems(res.data.data || []);
     } catch {
-      toast.error('Gagal memuat users')
+      toast.error("Gagal memuat users");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load();
+  }, []);
 
   const toggle = async (u) => {
     try {
-      await usersApi.update(u.id, { is_active: u.is_active ? 0 : 1 })
-      toast.success('User diperbarui')
-      load()
+      await usersApi.update(u.id, { is_active: u.is_active ? 0 : 1 });
+      toast.success("User diperbarui");
+      load();
     } catch {
-      toast.error('Gagal')
+      toast.error("Gagal");
     }
-  }
+  };
 
   const roleVariant = (role) => {
-    if (role === 'admin') return 'brand'
-    if (role === 'kurir') return 'info'
-    return 'default'
-  }
+    if (role === "admin") return "brand";
+    if (role === "kurir") return "info";
+    return "default";
+  };
 
   return (
     <div>
@@ -63,10 +70,14 @@ export default function Users() {
             <tbody className="divide-y divide-stone-100">
               {items.map((u) => (
                 <tr key={u.id} className="hover:bg-stone-50/50 transition">
-                  <td className="px-5 py-3 font-medium text-stone-900">{u.name}</td>
+                  <td className="px-5 py-3 font-medium text-stone-900">
+                    {u.name}
+                  </td>
                   <td className="px-5 py-3 text-stone-500">{u.email}</td>
                   <td className="px-5 py-3">
-                    <Badge variant={roleVariant(u.role_name)}>{u.role_name}</Badge>
+                    <Badge variant={roleVariant(u.role_name)}>
+                      {u.role_name}
+                    </Badge>
                   </td>
                   <td className="px-5 py-3 text-center">
                     {u.is_active ? (
@@ -77,7 +88,7 @@ export default function Users() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <Button size="sm" variant="ghost" onClick={() => toggle(u)}>
-                      {u.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                      {u.is_active ? "Nonaktifkan" : "Aktifkan"}
                     </Button>
                   </td>
                 </tr>
@@ -87,5 +98,5 @@ export default function Users() {
         )}
       </Card>
     </div>
-  )
+  );
 }
