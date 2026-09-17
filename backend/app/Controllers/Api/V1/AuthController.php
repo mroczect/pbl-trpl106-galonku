@@ -18,12 +18,12 @@ class AuthController
         ]);
 
         if (User::emailExists($data['email'])) {
-            Response::error('Email sudah terdaftar', 409);
+            Response::error('Email already registered', 409);
         }
 
         $id = AuthService::register($data);
 
-        Response::success(['id' => $id], 'Registrasi berhasil', 201);
+        Response::success(['id' => $id], 'Registration successful', 201);
     }
 
     public function login(Request $req): void
@@ -35,8 +35,8 @@ class AuthController
 
         $user = Auth::attempt($data['email'], $data['password']);
         if (!$user) {
-            AppLogger::logger()->warning('Login gagal', ['email' => $data['email']]);
-            Response::error('Email atau password salah', 401);
+            AppLogger::logger()->warning('Login failed', ['email' => $data['email']]);
+            Response::error('Invalid email or password', 401);
         }
 
         User::updateLastLogin((int) $user['id']);
@@ -56,13 +56,13 @@ class AuthController
                 'role_id'   => $user['role_id'],
                 'role_name' => $user['role_name'],
             ],
-        ] + $tokens, 'Login berhasil');
+        ] + $tokens, 'Login successful');
     }
 
     public function me(Request $req): void
     {
         $user = Auth::currentUser();
-        if (!$user) Response::error('Belum login', 401);
+        if (!$user) Response::error('Not authenticated', 401);
 
         unset($user['password_hash']);
         Response::success($user);
@@ -74,15 +74,15 @@ class AuthController
 
         $payload = Jwt::verifyRefresh($data['refresh_token']);
         if (!$payload || !isset($payload['sub'])) {
-            Response::error('Refresh token tidak valid', 401);
+            Response::error('Invalid refresh token', 401);
         }
 
         $user = User::find((int) $payload['sub']);
         if (!$user || (int) $user['is_active'] !== 1) {
-            Response::error('User tidak aktif', 401);
+            Response::error('User is not active', 401);
         }
 
-        Response::success(Auth::login($user), 'Token diperbarui');
+        Response::success(Auth::login($user), 'Token refreshed');
     }
 
     public function logout(Request $req): void
@@ -93,6 +93,6 @@ class AuthController
         if ($token) Auth::logout($token);
         if ($user) AppLogger::action($user['id'], 'logout', 'user', $user['id'], null);
 
-        Response::success(null, 'Logout berhasil');
+        Response::success(null, 'Logged out successfully');
     }
 }
