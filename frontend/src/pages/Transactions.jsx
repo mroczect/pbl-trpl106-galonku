@@ -1,60 +1,68 @@
-import { useEffect, useState } from 'react'
-import { transactionsApi } from '../api/transactions'
-import { customersApi } from '../api/customers'
-import { productsApi } from '../api/products'
+import { useEffect, useState } from "react";
+import { transactionsApi } from "../api/transactions";
+import { customersApi } from "../api/customers";
+import { productsApi } from "../api/products";
 import {
-  Button, Card, PageHeader, EmptyState, Loading, StatusBadge, Select
-} from '../components/ui'
-import toast from 'react-hot-toast'
-import { Plus, Receipt, X, Trash2 } from 'lucide-react'
+  Button,
+  Card,
+  PageHeader,
+  EmptyState,
+  Loading,
+  StatusBadge,
+  Select,
+} from "../components/ui";
+import toast from "react-hot-toast";
+import { Plus, Receipt, X, Trash2 } from "lucide-react";
 
 export default function Transactions() {
-  const [items, setItems] = useState([])
-  const [customers, setCustomers] = useState([])
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ customer_id: '', items: [] })
+  const [items, setItems] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ customer_id: "", items: [] });
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const [t, c, p] = await Promise.all([
         transactionsApi.list({ per_page: 50 }),
         customersApi.list({ per_page: 100 }),
         productsApi.list({ per_page: 100 }),
-      ])
-      setItems(t.data.data || [])
-      setCustomers(c.data.data || [])
-      setProducts(p.data.data || [])
+      ]);
+      setItems(t.data.data || []);
+      setCustomers(c.data.data || []);
+      setProducts(p.data.data || []);
     } catch {
-      toast.error('Gagal memuat data')
+      toast.error("Gagal memuat data");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load();
+  }, []);
 
   const openCreate = () => {
-    setForm({ customer_id: '', items: [{ product_id: '', qty: 1 }] })
-    setShowForm(true)
-  }
+    setForm({ customer_id: "", items: [{ product_id: "", qty: 1 }] });
+    setShowForm(true);
+  };
 
   const addItem = () =>
-    setForm({ ...form, items: [...form.items, { product_id: '', qty: 1 }] })
+    setForm({ ...form, items: [...form.items, { product_id: "", qty: 1 }] });
 
   const updateItem = (i, key, val) => {
-    const next = [...form.items]
-    next[i][key] = val
-    setForm({ ...form, items: next })
-  }
+    const next = [...form.items];
+    next[i][key] = val;
+    setForm({ ...form, items: next });
+  };
 
   const removeItem = (i) =>
-    setForm({ ...form, items: form.items.filter((_, idx) => idx !== i) })
+    setForm({ ...form, items: form.items.filter((_, idx) => idx !== i) });
 
   const submit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
       await transactionsApi.create({
         customer_id: Number(form.customer_id),
@@ -62,31 +70,35 @@ export default function Transactions() {
           product_id: Number(it.product_id),
           qty: Number(it.qty),
         })),
-      })
-      toast.success('Transaksi dibuat')
-      setShowForm(false)
-      load()
+      });
+      toast.success("Transaksi dibuat");
+      setShowForm(false);
+      load();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Gagal membuat transaksi')
+      toast.error(err.response?.data?.message || "Gagal membuat transaksi");
     }
-  }
+  };
 
   const updateStatus = async (id, status) => {
     try {
-      await transactionsApi.updateStatus(id, { status })
-      toast.success('Status diperbarui')
-      load()
+      await transactionsApi.updateStatus(id, { status });
+      toast.success("Status diperbarui");
+      load();
     } catch {
-      toast.error('Gagal')
+      toast.error("Gagal");
     }
-  }
+  };
 
   return (
     <div>
       <PageHeader
         title="Transaksi"
         description="Kelola transaksi penjualan depot"
-        action={<Button icon={Plus} onClick={openCreate}>Transaksi baru</Button>}
+        action={
+          <Button icon={Plus} onClick={openCreate}>
+            Transaksi baru
+          </Button>
+        }
       />
 
       <Card className="overflow-hidden">
@@ -97,7 +109,11 @@ export default function Transactions() {
             icon={Receipt}
             title="Belum ada transaksi"
             description="Buat transaksi pertama untuk memulai"
-            action={<Button icon={Plus} onClick={openCreate}>Transaksi baru</Button>}
+            action={
+              <Button icon={Plus} onClick={openCreate}>
+                Transaksi baru
+              </Button>
+            }
           />
         ) : (
           <table className="w-full text-sm">
@@ -114,22 +130,28 @@ export default function Transactions() {
             <tbody className="divide-y divide-stone-100">
               {items.map((t) => (
                 <tr key={t.id} className="hover:bg-stone-50/50 transition">
-                  <td className="px-5 py-3 font-mono text-xs text-stone-500">{t.invoice_no}</td>
-                  <td className="px-5 py-3 font-medium text-stone-900">{t.customer_name}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-stone-500">
+                    {t.invoice_no}
+                  </td>
+                  <td className="px-5 py-3 font-medium text-stone-900">
+                    {t.customer_name}
+                  </td>
                   <td className="px-5 py-3 text-right tabular-nums">
-                    Rp {Number(t.total_amount).toLocaleString('id-ID')}
+                    Rp {Number(t.total_amount).toLocaleString("id-ID")}
                   </td>
                   <td className="px-5 py-3 text-center">
                     <StatusBadge status={t.status} />
                   </td>
-                  <td className="px-5 py-3 text-xs text-stone-400">{t.created_at}</td>
+                  <td className="px-5 py-3 text-xs text-stone-400">
+                    {t.created_at}
+                  </td>
                   <td className="px-5 py-3 text-right">
                     <select
                       value={t.status}
                       onChange={(e) => updateStatus(t.id, e.target.value)}
                       className="text-xs h-8 px-2 bg-white border border-stone-200 rounded-md focus:outline-none focus:border-brand-500"
                     >
-                      {['pending', 'paid', 'partial', 'cancelled'].map((s) => (
+                      {["pending", "paid", "partial", "cancelled"].map((s) => (
                         <option key={s}>{s}</option>
                       ))}
                     </select>
@@ -145,7 +167,9 @@ export default function Transactions() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl max-h-[90vh] overflow-auto">
             <div className="px-6 py-4 border-b border-stone-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="text-sm font-semibold text-stone-900">Transaksi baru</h2>
+              <h2 className="text-sm font-semibold text-stone-900">
+                Transaksi baru
+              </h2>
               <button
                 onClick={() => setShowForm(false)}
                 className="p-1 text-stone-400 hover:text-stone-700 rounded-md"
@@ -158,7 +182,9 @@ export default function Transactions() {
                 label="Pelanggan"
                 required
                 value={form.customer_id}
-                onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, customer_id: e.target.value })
+                }
               >
                 <option value="">Pilih pelanggan</option>
                 {customers.map((c) => (
@@ -170,7 +196,9 @@ export default function Transactions() {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-stone-700">Item</label>
+                  <label className="text-xs font-medium text-stone-700">
+                    Item
+                  </label>
                   <button
                     type="button"
                     onClick={addItem}
@@ -185,7 +213,9 @@ export default function Transactions() {
                       <select
                         required
                         value={it.product_id}
-                        onChange={(e) => updateItem(i, 'product_id', e.target.value)}
+                        onChange={(e) =>
+                          updateItem(i, "product_id", e.target.value)
+                        }
                         className="flex-1 h-9 px-3 text-sm bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-brand-500"
                       >
                         <option value="">Pilih produk</option>
@@ -200,7 +230,7 @@ export default function Transactions() {
                         min="1"
                         required
                         value={it.qty}
-                        onChange={(e) => updateItem(i, 'qty', e.target.value)}
+                        onChange={(e) => updateItem(i, "qty", e.target.value)}
                         className="w-20 h-9 px-3 text-sm bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-brand-500"
                       />
                       <button
@@ -216,7 +246,9 @@ export default function Transactions() {
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button type="submit" className="flex-1">Buat transaksi</Button>
+                <Button type="submit" className="flex-1">
+                  Buat transaksi
+                </Button>
                 <Button
                   type="button"
                   variant="secondary"
@@ -230,5 +262,5 @@ export default function Transactions() {
         </div>
       )}
     </div>
-  )
+  );
 }
