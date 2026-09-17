@@ -28,7 +28,7 @@ class Database
                     PDO::ATTR_EMULATE_PREPARES   => false,
                 ]);
             } catch (PDOException $e) {
-                throw new \RuntimeException('Koneksi DB gagal: ' . $e->getMessage());
+                throw new \RuntimeException('DB connection failed: ' . $e->getMessage());
             }
         }
 
