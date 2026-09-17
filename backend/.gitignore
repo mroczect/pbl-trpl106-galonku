@@ -37,3 +37,8 @@ storage/logs/*
 storage/cache/*
 .phpunit.cache/
 .snapcat.md
+
+/storage/cache/*
+/storage/logs/*
+/storage/uploads/*
+/storage/coverage/
