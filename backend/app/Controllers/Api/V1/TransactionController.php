@@ -41,14 +41,16 @@ class TransactionController
         $data = $req->validate([
             'customer_id' => 'required|integer',
             'items'       => 'required|array',
+            'type'        => 'in:sale,delivery,return',
+            'status'      => 'in:pending,paid,partial,cancelled',
         ]);
-
+    
         if (empty($data['items'])) {
-            Response::error('Items must not be empty');
+            Response::error('Items must not be empty', 422);
         }
-
+    
         $result = TransactionService::create($req->body(), Auth::id());
-
+    
         Response::success($result, 'Transaction created successfully', 201);
     }
 
