@@ -71,17 +71,21 @@ class AuthController
     public function refresh(Request $req): void
     {
         $data = $req->validate(['refresh_token' => 'required']);
-
+    
+        if (Jwt::isBlacklisted($data['refresh_token'])) {
+            Response::error('Refresh token has been revoked', 401);
+        }
+    
         $payload = Jwt::verifyRefresh($data['refresh_token']);
         if (!$payload || !isset($payload['sub'])) {
             Response::error('Invalid refresh token', 401);
         }
-
+    
         $user = User::find((int) $payload['sub']);
         if (!$user || (int) $user['is_active'] !== 1) {
             Response::error('User is not active', 401);
         }
-
+    
         Response::success(Auth::login($user), 'Token refreshed');
     }
 
@@ -89,10 +93,12 @@ class AuthController
     {
         $user = Auth::currentUser();
         $token = $req->bearerToken();
-
+        $refreshToken = $req->body('refresh_token');
+    
         if ($token) Auth::logout($token);
+        if ($refreshToken) Auth::logout($refreshToken);
         if ($user) AppLogger::action($user['id'], 'logout', 'user', $user['id'], null);
-
+    
         Response::success(null, 'Logged out successfully');
     }
 }
