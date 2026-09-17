@@ -5,9 +5,9 @@ return new class extends Seeder {
     public function run(PDO $pdo): void
     {
         $roles = [
-            ['id' => 1, 'name' => 'admin',     'description' => 'Administrator sistem'],
-            ['id' => 2, 'name' => 'kurir',     'description' => 'Kurir pengantaran'],
-            ['id' => 3, 'name' => 'pelanggan', 'description' => 'Pelanggan depot air'],
+            ['id' => 1, 'name' => 'admin',     'description' => 'System administrator'],
+            ['id' => 2, 'name' => 'kurir',     'description' => 'Delivery courier'],
+            ['id' => 3, 'name' => 'pelanggan', 'description' => 'Water depot customer'],
         ];
 
         $stmt = $pdo->prepare(
