@@ -42,3 +42,7 @@ storage/cache/*
 /storage/logs/*
 /storage/uploads/*
 /storage/coverage/
+/.phpunit.cach/*
+# PHPUnit
+/.phpunit.cache/
+/.phpunit.result.cache
