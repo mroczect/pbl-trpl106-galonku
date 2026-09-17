@@ -86,7 +86,7 @@ class Router
             ]);
         }
 
-        Response::error('Route tidak ditemukan: ' . $req->path(), 404);
+        Response::error('Route not found: ' . $req->path(), 404);
     }
 
     private function runMiddleware(array $middleware, Request $req): void
