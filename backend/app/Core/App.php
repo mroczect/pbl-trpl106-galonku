@@ -46,22 +46,24 @@ class App
     private function registerCors(): void
     {
         $cors = require dirname(__DIR__, 2) . '/config/cors.php';
-
-        $origin = '*';
+    
+        $origin = null;
         if (isset($_SERVER['HTTP_ORIGIN'])) {
-            if (in_array('*', $cors['allowed_origins'], true) ||
-                in_array($_SERVER['HTTP_ORIGIN'], $cors['allowed_origins'], true)) {
+            $allowed = $cors['allowed_origins'];
+            if (in_array('*', $allowed, true) || in_array($_SERVER['HTTP_ORIGIN'], $allowed, true)) {
                 $origin = $_SERVER['HTTP_ORIGIN'];
             }
         }
-
-        header("Access-Control-Allow-Origin: $origin");
+    
+        if ($origin) {
+            header("Access-Control-Allow-Origin: $origin");
+        }
         header("Access-Control-Allow-Methods: {$cors['allowed_methods']}");
         header("Access-Control-Allow-Headers: {$cors['allowed_headers']}");
         if ($cors['credentials']) {
             header('Access-Control-Allow-Credentials: true');
         }
-
+    
         if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
             http_response_code(204);
             exit;

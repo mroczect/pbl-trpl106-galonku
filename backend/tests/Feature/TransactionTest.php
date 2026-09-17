@@ -64,7 +64,7 @@ class TransactionTest extends TestCase
             'items' => [
                 ['product_id' => 1, 'qty' => 99999],
             ],
-        ], $this->withAuth())->assertStatus(500); 
+        ], $this->withAuth())->assertUnprocessable(); 
 
         $this->assertDatabaseHas('products', ['id' => 1, 'stock' => 49]);
     }

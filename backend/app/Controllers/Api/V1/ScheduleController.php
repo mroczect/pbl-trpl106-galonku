@@ -42,7 +42,14 @@ class ScheduleController
             'user_id'      => 'required|integer',
             'scheduled_at' => 'required|date',
         ]);
-
+    
+        if (!\App\Models\Customer::find((int) $data['customer_id'])) {
+            throw new \App\Exceptions\NotFoundException('Customer not found');
+        }
+        if (!\App\Models\User::find((int) $data['user_id'])) {
+            throw new \App\Exceptions\NotFoundException('User not found');
+        }
+    
         $id = Schedule::create([
             'customer_id'  => (int) $data['customer_id'],
             'user_id'      => (int) $data['user_id'],
@@ -50,9 +57,9 @@ class ScheduleController
             'status'       => 'pending',
             'notes'        => $req->body('notes'),
         ]);
-
+    
         AppLogger::action(Auth::id(), 'create', 'schedule', $id, null);
-
+    
         Response::success(['id' => $id], 'Schedule created', 201);
     }
 

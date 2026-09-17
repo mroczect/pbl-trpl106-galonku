@@ -145,4 +145,18 @@ class AuthTest extends TestCase
 
         $this->get('/api/v1/auth/me', [], $this->withAuth())->assertUnauthorized();
     }
+
+    public function test_logout_revokes_refresh_token(): void
+    {
+        $this->loginAsAdmin();
+        $refresh = $this->post('/api/v1/auth/login', [
+            'email' => 'admin@galonku.com', 'password' => 'admin123',
+        ])->json('data.refresh_token');
+    
+        $this->post('/api/v1/auth/logout', ['refresh_token' => $refresh], $this->withAuth())
+            ->assertOk();
+    
+        $this->post('/api/v1/auth/refresh', ['refresh_token' => $refresh])
+            ->assertUnauthorized();
+    }
 }

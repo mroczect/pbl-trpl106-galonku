@@ -24,6 +24,9 @@ class ErrorHandler
             Response::error($e->getMessage(), 400);
         }
 
+        if ($e instanceof \RuntimeException && str_starts_with($e->getMessage(), 'Insufficient stock')) {
+            Response::error($e->getMessage(), 422);
+        }
         $debug = ($_ENV['APP_DEBUG'] ?? 'false') === 'true';
 
         AppLogger::logger()->error($e->getMessage(), [
