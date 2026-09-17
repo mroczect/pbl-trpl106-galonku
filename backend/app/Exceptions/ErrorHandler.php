@@ -33,7 +33,7 @@ class ErrorHandler
         ]);
 
         Response::error(
-            $debug ? $e->getMessage() : 'Terjadi kesalahan server',
+            $debug ? $e->getMessage() : 'Internal server error',
             500
         );
     }
