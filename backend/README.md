@@ -62,8 +62,8 @@ php -m | grep -E 'pdo|json|mbstring|openssl'
 Clone the repository and install dependencies:
 
 ```bash
-git clone <repo-url> galonku-backend
-cd galonku-backend
+git clone https://github.com/mroczect/pbl-trpl106-galonku
+cd pbl-trpl106-galonku/backend/
 composer install
 ```
 
