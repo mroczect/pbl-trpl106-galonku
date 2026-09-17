@@ -32,7 +32,7 @@ class TransactionController
     public function show(Request $req, int $id): void
     {
         $trx = Transaction::findWithItems($id);
-        if (!$trx) throw new NotFoundException('Transaksi tidak ditemukan');
+        if (!$trx) throw new NotFoundException('Transaction not found');
         Response::success($trx);
     }
 
@@ -44,18 +44,18 @@ class TransactionController
         ]);
 
         if (empty($data['items'])) {
-            Response::error('Items tidak boleh kosong');
+            Response::error('Items must not be empty');
         }
 
         $result = TransactionService::create($req->body(), Auth::id());
 
-        Response::success($result, 'Transaksi berhasil dibuat', 201);
+        Response::success($result, 'Transaction created successfully', 201);
     }
 
     public function updateStatus(Request $req, int $id): void
     {
         $trx = Transaction::find($id);
-        if (!$trx) throw new NotFoundException('Transaksi tidak ditemukan');
+        if (!$trx) throw new NotFoundException('Transaction not found');
 
         $data = $req->validate([
             'status' => 'required|in:pending,paid,partial,cancelled',
@@ -69,6 +69,6 @@ class TransactionController
         Transaction::update($id, $update);
         AppLogger::action(Auth::id(), 'update', 'transaction', $id, $update);
 
-        Response::success(null, 'Status transaksi diperbarui');
+        Response::success(null, 'Transaction status updated');
     }
 }
