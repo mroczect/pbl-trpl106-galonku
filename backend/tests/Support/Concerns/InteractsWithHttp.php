@@ -51,8 +51,6 @@ trait InteractsWithHttp
         } catch (ResponseCaptured $e) {
             return new TestResponse($e->status, $e->body, $e->headers);
         } catch (\Throwable $e) {
-            // Tangkap exception dari controller (ValidationException, NotFoundException, dll)
-            // dan lewatkan ErrorHandler seperti di production, lalu ambil Response-nya.
             try {
                 ErrorHandler::handle($e);
             } catch (ResponseCaptured $captured) {

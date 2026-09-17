@@ -26,7 +26,7 @@ class CustomerController
     public function show(Request $req, int $id): void
     {
         $c = Customer::find($id);
-        if (!$c) throw new NotFoundException('Pelanggan tidak ditemukan');
+        if (!$c) throw new NotFoundException('Customer not found');
         Response::success($c);
     }
 
@@ -38,7 +38,7 @@ class CustomerController
         ]);
 
         if (Customer::phoneExists($data['phone'])) {
-            Response::error('Nomor telepon sudah terdaftar', 409);
+            Response::error('Phone number already registered', 409);
         }
 
         $id = Customer::create([
@@ -51,12 +51,12 @@ class CustomerController
 
         AppLogger::action(Auth::id(), 'create', 'customer', $id, null);
 
-        Response::success(['id' => $id], 'Pelanggan ditambahkan', 201);
+        Response::success(['id' => $id], 'Customer created', 201);
     }
 
     public function update(Request $req, int $id): void
     {
-        if (!Customer::find($id)) throw new NotFoundException('Pelanggan tidak ditemukan');
+        if (!Customer::find($id)) throw new NotFoundException('Customer not found');
 
         $data = $req->validate([
             'name'      => 'min:3|max:100',
@@ -67,23 +67,23 @@ class CustomerController
         if ($req->body('address') !== null) $data['address'] = $req->body('address');
         if ($req->body('notes') !== null)   $data['notes']   = $req->body('notes');
 
-        if (empty($data)) Response::error('Tidak ada data yang diubah');
+        if (empty($data)) Response::error('No data to update');
 
         if (isset($data['is_active'])) $data['is_active'] = (int) $data['is_active'];
 
         Customer::update($id, $data);
         AppLogger::action(Auth::id(), 'update', 'customer', $id, $data);
 
-        Response::success(null, 'Pelanggan diperbarui');
+        Response::success(null, 'Customer updated');
     }
 
     public function destroy(Request $req, int $id): void
     {
-        if (!Customer::find($id)) throw new NotFoundException('Pelanggan tidak ditemukan');
+        if (!Customer::find($id)) throw new NotFoundException('Customer not found');
 
         Customer::update($id, ['is_active' => 0]);
         AppLogger::action(Auth::id(), 'delete', 'customer', $id, null);
 
-        Response::success(null, 'Pelanggan dinonaktifkan');
+        Response::success(null, 'Customer deactivated');
     }
 }

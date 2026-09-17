@@ -30,7 +30,7 @@ class RateLimitMiddleware
         file_put_contents($file, json_encode($data));
 
         if ($data['count'] > $max) {
-            Response::error('Terlalu banyak permintaan. Coba lagi nanti.', 429, null, [
+            Response::error('Too many requests. Please try again later.', 429, null, [
                 'Retry-After' => (string) max(1, $data['reset'] - time()),
             ]);
         }

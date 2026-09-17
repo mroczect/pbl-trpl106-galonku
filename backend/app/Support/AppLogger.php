@@ -42,7 +42,7 @@ class AppLogger
                 'payload' => $payload,
             ]);
         } catch (\Throwable $e) {
-            self::logger()->error('Gagal log: ' . $e->getMessage());
+            self::logger()->error('Failed to log: ' . $e->getMessage());
         }
     }
 }

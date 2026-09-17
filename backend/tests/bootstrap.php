@@ -9,5 +9,4 @@ Dotenv::createImmutable(__DIR__ . '/..', $envFile)->safeLoad();
 
 date_default_timezone_set('Asia/Jakarta');
 
-// Paksa test mode: Response::json() throw ResponseCaptured, bukan echo+exit.
 Response::$testMode = true;

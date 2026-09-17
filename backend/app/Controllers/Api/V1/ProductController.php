@@ -30,7 +30,7 @@ class ProductController
     public function show(Request $req, int $id): void
     {
         $product = Product::find($id);
-        if (!$product) throw new NotFoundException('Produk tidak ditemukan');
+        if (!$product) throw new NotFoundException('Product not found');
         Response::success($product);
     }
 
@@ -51,7 +51,7 @@ class ProductController
         ]);
 
         if (Product::skuExists($data['sku'])) {
-            Response::error('SKU sudah digunakan', 409);
+            Response::error('SKU already used', 409);
         }
 
         $id = Product::create([
@@ -65,12 +65,12 @@ class ProductController
 
         AppLogger::action(Auth::id(), 'create', 'product', $id, ['sku' => $data['sku']]);
 
-        Response::success(['id' => $id], 'Produk ditambahkan', 201);
+        Response::success(['id' => $id], 'Product created', 201);
     }
 
     public function update(Request $req, int $id): void
     {
-        if (!Product::find($id)) throw new NotFoundException('Produk tidak ditemukan');
+        if (!Product::find($id)) throw new NotFoundException('Product not found');
 
         $data = $req->validate([
             'name'      => 'min:3|max:150',
@@ -80,7 +80,7 @@ class ProductController
             'is_active' => 'boolean',
         ]);
 
-        if (empty($data)) Response::error('Tidak ada data yang diubah');
+        if (empty($data)) Response::error('No data to update');
 
         if (isset($data['price'])) $data['price'] = (float) $data['price'];
         if (isset($data['stock'])) $data['stock'] = (int) $data['stock'];
@@ -89,16 +89,16 @@ class ProductController
         Product::update($id, $data);
         AppLogger::action(Auth::id(), 'update', 'product', $id, $data);
 
-        Response::success(null, 'Produk diperbarui');
+        Response::success(null, 'Product updated');
     }
 
     public function destroy(Request $req, int $id): void
     {
-        if (!Product::find($id)) throw new NotFoundException('Produk tidak ditemukan');
+        if (!Product::find($id)) throw new NotFoundException('Product not found');
 
         Product::update($id, ['is_active' => 0]);
         AppLogger::action(Auth::id(), 'delete', 'product', $id, null);
 
-        Response::success(null, 'Produk dinonaktifkan');
+        Response::success(null, 'Product deactivated');
     }
 }

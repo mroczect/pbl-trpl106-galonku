@@ -13,7 +13,7 @@ return new class extends Seeder {
         $stmt = $pdo->prepare("
             INSERT INTO transactions
                 (invoice_no, customer_id, user_id, type, total_amount, paid_amount, status, notes)
-            VALUES (?, ?, ?, 'sale', ?, ?, 'paid', 'Transaksi demo')
+            VALUES (?, ?, ?, 'sale', ?, ?, 'paid', 'Demo transaction')
         ");
         $stmt->execute(['INV-DEMO-0001', 1, 1, 26000.00, 26000.00]);
         $trxId = (int) $pdo->lastInsertId();
@@ -31,7 +31,7 @@ return new class extends Seeder {
         $stmt = $pdo->prepare("
             INSERT INTO schedules
                 (customer_id, user_id, scheduled_at, status, notes)
-            VALUES (?, ?, ?, 'pending', 'Antar galon')
+            VALUES (?, ?, ?, 'pending', 'Water gallon delivery')
         ");
         $stmt->execute([2, 2, date('Y-m-d H:i:s', time() + 86400)]);
     }

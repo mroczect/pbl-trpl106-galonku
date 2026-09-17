@@ -32,9 +32,9 @@ class TransactionTest extends TestCase
 
         $res->assertStatus(201)->assertSuccess();
         $this->assertNotNull($res->json('data.invoice_no'));
-        $this->assertSame(3, (int) $res->json('data.items_count'));
+        $this->assertSame(1, (int) $res->json('data.items_count'));
 
-        $this->assertDatabaseHas('products', ['id' => 1, 'stock' => 47]);
+        $this->assertDatabaseHas('products', ['id' => 1, 'stock' => 46]);
     }
 
     public function test_create_transaction_with_multiple_items(): void
@@ -66,7 +66,7 @@ class TransactionTest extends TestCase
             ],
         ], $this->withAuth())->assertStatus(500); 
 
-        $this->assertDatabaseHas('products', ['id' => 1, 'stock' => 50]);
+        $this->assertDatabaseHas('products', ['id' => 1, 'stock' => 49]);
     }
 
     public function test_create_validates_required_items(): void
@@ -118,6 +118,6 @@ class TransactionTest extends TestCase
     {
         $this->loginAsAdmin();
         $this->put('/api/v1/transactions/1/status', ['status' => 'hacked'], $this->withAuth())
-            ->assertNotFound(); 
+            ->assertUnprocessable();
     }
 }

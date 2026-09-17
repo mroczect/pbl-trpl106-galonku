@@ -303,7 +303,6 @@ return new class extends Migration {
 };
 PHP
 
-# ================= SEEDERS =================
 
 cat > "$BASE/seeders/Seeder.php" <<'PHP'
 <?php
@@ -474,7 +473,7 @@ return new class extends Seeder {
 };
 PHP
 
-echo "Selesai. File yang dibuat:\n"
+echo "Done. Files created:\n"
 ls -1 "$BASE/migrations"
 echo "---"
 ls -1 "$BASE/seeders"

@@ -29,11 +29,11 @@ class CustomerTest extends TestCase
     {
         $this->loginAsAdmin();
         $this->post('/api/v1/customers', [
-            'name' => 'A', 'phone' => '0899111222',
+            'name' => 'Cust A', 'phone' => '0899111222',
         ], $this->withAuth())->assertStatus(201);
 
         $this->post('/api/v1/customers', [
-            'name' => 'B', 'phone' => '0899111222',
+            'name' => 'Cust B', 'phone' => '0899111222',
         ], $this->withAuth())->assertStatus(409);
     }
 

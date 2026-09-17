@@ -19,52 +19,52 @@ class Validator
 
                 switch ($name) {
                     case 'required':
-                        if ($value === null || $value === '') $errors[$field][] = "$field wajib diisi";
+                        if ($value === null || $value === '') $errors[$field][] = "$field is required";
                         break;
                     case 'email':
                         if ($value && !filter_var($value, FILTER_VALIDATE_EMAIL))
-                            $errors[$field][] = "$field harus email valid";
+                            $errors[$field][] = "$field must be a valid email";
                         break;
                     case 'min':
                         if (is_string($value) && mb_strlen($value) < (int)$param)
-                            $errors[$field][] = "$field minimal $param karakter";
+                            $errors[$field][] = "$field must be at least $param characters";
                         if (is_numeric($value) && $value < (int)$param)
-                            $errors[$field][] = "$field minimal $param";
+                            $errors[$field][] = "$field must be at least $param";
                         break;
                     case 'max':
                         if (is_string($value) && mb_strlen($value) > (int)$param)
-                            $errors[$field][] = "$field maksimal $param karakter";
+                            $errors[$field][] = "$field must be at most $param characters";
                         if (is_numeric($value) && $value > (int)$param)
-                            $errors[$field][] = "$field maksimal $param";
+                            $errors[$field][] = "$field must be at most $param";
                         break;
                     case 'numeric':
                         if ($value !== null && !is_numeric($value))
-                            $errors[$field][] = "$field harus berupa angka";
+                            $errors[$field][] = "$field must be a number";
                         break;
                     case 'integer':
                         if ($value !== null && filter_var($value, FILTER_VALIDATE_INT) === false)
-                            $errors[$field][] = "$field harus bilangan bulat";
+                            $errors[$field][] = "$field must be an integer";
                         break;
                     case 'in':
                         $allowed = explode(',', $param ?? '');
                         if ($value !== null && !in_array((string)$value, $allowed, true))
-                            $errors[$field][] = "$field harus salah satu dari: $param";
+                            $errors[$field][] = "$field must be one of: $param";
                         break;
                     case 'array':
                         if ($value !== null && !is_array($value))
-                            $errors[$field][] = "$field harus berupa array";
+                            $errors[$field][] = "$field must be an array";
                         break;
                     case 'date':
                         if ($value !== null && strtotime((string)$value) === false)
-                            $errors[$field][] = "$field harus tanggal valid";
+                            $errors[$field][] = "$field must be a valid date";
                         break;
                     case 'boolean':
                         if ($value !== null && !in_array($value, [true, false, 0, 1, '0', '1'], true))
-                            $errors[$field][] = "$field harus boolean";
+                            $errors[$field][] = "$field must be a boolean";
                         break;
                     case 'phone':
                         if ($value !== null && !preg_match('/^[0-9+\-\s]{8,20}$/', (string)$value))
-                            $errors[$field][] = "$field format nomor tidak valid";
+                            $errors[$field][] = "$field has an invalid phone format";
                         break;
                 }
             }
@@ -75,7 +75,7 @@ class Validator
         }
 
         if (!empty($errors)) {
-            throw new ValidationException('Validasi gagal', $errors);
+            throw new ValidationException('Validation failed', $errors);
         }
 
         return $validated;

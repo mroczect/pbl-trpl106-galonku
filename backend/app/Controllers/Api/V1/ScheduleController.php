@@ -31,7 +31,7 @@ class ScheduleController
     public function show(Request $req, int $id): void
     {
         $s = Schedule::find($id);
-        if (!$s) throw new NotFoundException('Jadwal tidak ditemukan');
+        if (!$s) throw new NotFoundException('Schedule not found');
         Response::success($s);
     }
 
@@ -53,12 +53,12 @@ class ScheduleController
 
         AppLogger::action(Auth::id(), 'create', 'schedule', $id, null);
 
-        Response::success(['id' => $id], 'Jadwal dibuat', 201);
+        Response::success(['id' => $id], 'Schedule created', 201);
     }
 
     public function updateStatus(Request $req, int $id): void
     {
-        if (!Schedule::find($id)) throw new NotFoundException('Jadwal tidak ditemukan');
+        if (!Schedule::find($id)) throw new NotFoundException('Schedule not found');
 
         $data = $req->validate([
             'status' => 'required|in:pending,on_route,done,cancelled',
@@ -67,6 +67,6 @@ class ScheduleController
         Schedule::update($id, ['status' => $data['status']]);
         AppLogger::action(Auth::id(), 'update', 'schedule', $id, ['status' => $data['status']]);
 
-        Response::success(null, 'Status jadwal diperbarui');
+        Response::success(null, 'Schedule status updated');
     }
 }

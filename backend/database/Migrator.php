@@ -9,10 +9,6 @@ class Migrator
     private string $migrationPath;
     private string $seederPath;
 
-    /**
-     * Urutan seeder sesuai dependency (bukan alfabetis).
-     * RoleSeeder -> UserSeeder -> ProductSeeder -> CustomerSeeder -> DemoSeeder
-     */
     private const SEEDER_ORDER = [
         'RoleSeeder',
         'UserSeeder',
@@ -71,7 +67,6 @@ class Migrator
         ");
     }
 
-    // ==================== MIGRATE ====================
 
     public function migrate(): void
     {
@@ -93,11 +88,6 @@ class Migrator
         echo "Migration complete.\n";
     }
 
-    /**
-     * MySQL/MariaDB tidak mendukung transactional DDL.
-     * Setiap CREATE/ALTER/DROP TABLE otomatis commit transaksi.
-     * Jadi beginTransaction() tidak dipakai di sini.
-     */
     private function runMigration(string $name, int $batch): void
     {
         echo "  $name ... ";
@@ -130,7 +120,6 @@ class Migrator
         }
     }
 
-    // ==================== ROLLBACK ====================
 
     public function rollback(int $steps = 1): void
     {
@@ -182,7 +171,6 @@ class Migrator
         echo "Rollback complete.\n";
     }
 
-    // ==================== FRESH / RESET ====================
 
     public function fresh(bool $withSeed = false): void
     {
@@ -240,13 +228,11 @@ class Migrator
         echo "Database $name dropped.\n";
     }
 
-    // ==================== SEED ====================
 
     public function seed(?string $only = null): void
     {
-        $files = $this->seederFiles();   // sudah urut dependency
+        $files = $this->seederFiles();   
 
-        // Map name => path
         $map = [];
         foreach ($files as $file) {
             $map[pathinfo($file, PATHINFO_FILENAME)] = $file;
@@ -289,7 +275,6 @@ class Migrator
         }
     }
 
-    // ==================== STATUS ====================
 
     public function status(): void
     {
@@ -315,7 +300,6 @@ class Migrator
         }
     }
 
-    // ==================== HELPERS ====================
 
     private function availableMigrations(): array
     {
@@ -345,14 +329,10 @@ class Migrator
         )->fetchColumn();
     }
 
-    /**
-     * Return seeder files SESUAI DEPENDENCY ORDER (bukan alfabetis).
-     */
     private function seederFiles(): array
     {
         $files = [];
 
-        // 1. Ambil sesuai urutan yang didefinisikan
         foreach (self::SEEDER_ORDER as $name) {
             $path = $this->seederPath . '/' . $name . '.php';
             if (file_exists($path)) {
@@ -360,7 +340,6 @@ class Migrator
             }
         }
 
-        // 2. Fallback: seeder yang tidak terdaftar, taruh di akhir
         foreach (glob($this->seederPath . '/*Seeder.php') as $f) {
             $base = pathinfo($f, PATHINFO_FILENAME);
             if ($base === 'Seeder') continue;

@@ -25,14 +25,14 @@ class TransactionService
                 $product = $stmt->fetch();
 
                 if (!$product) {
-                    throw new NotFoundException("Produk ID {$item['product_id']} tidak ditemukan");
+                    throw new NotFoundException("Product ID {$item['product_id']} not found");
                 }
 
                 $qty = (int) $item['qty'];
-                if ($qty < 1) throw new \InvalidArgumentException('Qty minimal 1');
+                if ($qty < 1) throw new \InvalidArgumentException('Quantity must be at least 1');
 
                 if ((int) $product['stock'] < $qty) {
-                    throw new \RuntimeException("Stok {$product['name']} tidak cukup");
+                    throw new \RuntimeException("Insufficient stock for {$product['name']}");
                 }
 
                 $subtotal = (float) $product['price'] * $qty;
@@ -89,7 +89,7 @@ class TransactionService
                 ]),
             ]);
 
-            AppLogger::logger()->info("Transaksi $invoiceNo dibuat", ['total' => $totalAmount]);
+            AppLogger::logger()->info("Transaction $invoiceNo created", ['total' => $totalAmount]);
 
             return [
                 'id'           => $trxId,

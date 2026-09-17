@@ -26,14 +26,14 @@ class UserController
     public function show(Request $req, int $id): void
     {
         $user = User::find($id);
-        if (!$user) throw new NotFoundException('User tidak ditemukan');
+        if (!$user) throw new NotFoundException('User not found');
         unset($user['password_hash']);
         Response::success($user);
     }
 
     public function update(Request $req, int $id): void
     {
-        if (!User::find($id)) throw new NotFoundException('User tidak ditemukan');
+        if (!User::find($id)) throw new NotFoundException('User not found');
 
         $data = $req->validate([
             'name'      => 'min:3|max:100',
@@ -42,21 +42,21 @@ class UserController
             'is_active' => 'boolean',
         ]);
 
-        if (empty($data)) Response::error('Tidak ada data yang diubah');
+        if (empty($data)) Response::error('No data to update');
 
         User::update($id, $data);
         AppLogger::action(Auth::id(), 'update', 'user', $id, $data);
 
-        Response::success(null, 'User diperbarui');
+        Response::success(null, 'User updated');
     }
 
     public function destroy(Request $req, int $id): void
     {
-        if (!User::find($id)) throw new NotFoundException('User tidak ditemukan');
+        if (!User::find($id)) throw new NotFoundException('User not found');
 
         User::update($id, ['is_active' => 0]);
         AppLogger::action(Auth::id(), 'delete', 'user', $id, null);
 
-        Response::success(null, 'User dinonaktifkan');
+        Response::success(null, 'User deactivated');
     }
 }

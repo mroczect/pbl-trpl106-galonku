@@ -401,7 +401,7 @@ Error:
 | `InvalidArgumentException` | 400    |
 | Anything else              | 500    |
 
-Unhandled exceptions are logged to `storage/logs/app.log` via Monolog with file, line, and stack trace. When `APP_DEBUG=true`, the exception message is included in the response. In production, the response is the generic `Terjadi kesalahan server`.
+Unhandled exceptions are logged to `storage/logs/app.log` via Monolog with file, line, and stack trace. When `APP_DEBUG=true`, the exception message is included in the response. In production, the response is the generic `Internal server error`.
 
 ### Validation
 
@@ -548,7 +548,7 @@ Response `201`:
 ```json
 {
 	"success": true,
-	"message": "Registrasi berhasil",
+	"message": "Registration successful",
 	"data": { "id": 4 }
 }
 ```
@@ -585,7 +585,7 @@ Response `200`:
 ```json
 {
 	"success": true,
-	"message": "Login berhasil",
+	"message": "Login successful",
 	"data": {
 		"user": {
 			"id": 1,
@@ -626,7 +626,7 @@ Response `200`:
 ```json
 {
 	"success": true,
-	"message": "Token diperbarui",
+	"message": "Token refreshed",
 	"data": {
 		"access_token": "eyJ...",
 		"refresh_token": "eyJ...",
@@ -688,7 +688,7 @@ Response `200`:
 ```json
 {
 	"success": true,
-	"message": "Logout berhasil",
+	"message": "Logged out successfully",
 	"data": null
 }
 ```
@@ -808,7 +808,7 @@ Response `201`:
 ```json
 {
 	"success": true,
-	"message": "Produk ditambahkan",
+	"message": "Product created",
 	"data": { "id": 6 }
 }
 ```
@@ -832,7 +832,7 @@ Response `200`:
 ```json
 {
 	"success": true,
-	"message": "Produk diperbarui",
+	"message": "Product updated",
 	"data": null
 }
 ```
@@ -856,7 +856,7 @@ Response `200`:
 ```json
 {
 	"success": true,
-	"message": "Produk dinonaktifkan",
+	"message": "Product deactivated",
 	"data": null
 }
 ```
@@ -910,7 +910,7 @@ Response `201`:
 ```json
 {
 	"success": true,
-	"message": "Pelanggan ditambahkan",
+	"message": "Customer created",
 	"data": { "id": 4 }
 }
 ```
@@ -928,7 +928,7 @@ Authorization: Bearer <token>
 
 Accepts `name`, `phone`, `address`, `notes`, `is_active`.
 
-Response `200` with `{ "success": true, "message": "Pelanggan diperbarui", "data": null }`.
+Response `200` with `{ "success": true, "message": "Customer updated", "data": null }`.
 
 ---
 
@@ -1092,7 +1092,7 @@ Response `201`:
 ```json
 {
 	"success": true,
-	"message": "Transaksi berhasil dibuat",
+	"message": "Transaction created successfully",
 	"data": {
 		"id": 1,
 		"invoice_no": "INV-20260917-8C4A",
@@ -1106,7 +1106,7 @@ Errors:
 
 - `422` if `customer_id` or `items` are missing or invalid.
 - `404` if a referenced product does not exist.
-- `500` if stock is insufficient. The message is `Stok <name> tidak cukup` when `APP_DEBUG=true`.
+- `500` if stock is insufficient. The message is `Insufficient stock for <name>` when `APP_DEBUG=true`.
 
 ---
 
@@ -1131,7 +1131,7 @@ Response `200`:
 ```json
 {
 	"success": true,
-	"message": "Status transaksi diperbarui",
+	"message": "Transaction status updated",
 	"data": null
 }
 ```
@@ -1187,7 +1187,7 @@ Response `201`:
 ```json
 {
 	"success": true,
-	"message": "Jadwal dibuat",
+	"message": "Schedule created",
 	"data": { "id": 1 }
 }
 ```
@@ -1212,7 +1212,7 @@ Response `200`:
 ```json
 {
 	"success": true,
-	"message": "Status jadwal diperbarui",
+	"message": "Schedule status updated",
 	"data": null
 }
 ```
@@ -1257,7 +1257,7 @@ Role: admin
 
 Accepts `name`, `phone`, `role_id`, `is_active`.
 
-Response `200` with `{ "success": true, "message": "User diperbarui", "data": null }`.
+Response `200` with `{ "success": true, "message": "User updated", "data": null }`.
 
 ---
 

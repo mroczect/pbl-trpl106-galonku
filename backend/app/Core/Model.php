@@ -50,7 +50,7 @@ abstract class Model
     {
         $data = static::filterFillable($data);
 
-        if (empty($data)) throw new \InvalidArgumentException('Data kosong');
+        if (empty($data)) throw new \InvalidArgumentException('Empty data');
 
         $cols = implode(', ', array_keys($data));
         $ph   = implode(', ', array_fill(0, count($data), '?'));
