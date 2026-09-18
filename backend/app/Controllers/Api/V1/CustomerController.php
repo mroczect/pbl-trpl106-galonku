@@ -69,6 +69,10 @@ class CustomerController
 
         if (empty($data)) Response::error('No data to update');
 
+        if (isset($data['phone']) && Customer::phoneExists($data['phone'], $id)) {
+            Response::error('Phone number already registered', 409);
+        }
+
         if (isset($data['is_active'])) $data['is_active'] = (int) $data['is_active'];
 
         Customer::update($id, $data);

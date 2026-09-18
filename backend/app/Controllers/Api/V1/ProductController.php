@@ -45,9 +45,9 @@ class ProductController
         $data = $req->validate([
             'sku'      => 'required|min:3|max:50',
             'name'     => 'required|min:3|max:150',
-            'price'    => 'required|numeric',
+            'price'    => 'required|numeric|min:0',
             'category' => 'in:galon,air,aksesoris,lain',
-            'stock'    => 'integer',
+            'stock'    => 'integer|min:0',
         ]);
 
         if (Product::skuExists($data['sku'])) {
@@ -75,8 +75,8 @@ class ProductController
         $data = $req->validate([
             'name'      => 'min:3|max:150',
             'category'  => 'in:galon,air,aksesoris,lain',
-            'price'     => 'numeric',
-            'stock'     => 'integer',
+            'price'     => 'numeric|min:0',
+            'stock'     => 'integer|min:0',
             'is_active' => 'boolean',
         ]);
 

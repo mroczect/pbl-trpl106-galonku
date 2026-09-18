@@ -6,8 +6,24 @@ use Dotenv\Dotenv;
 
 require __DIR__ . '/../vendor/autoload.php';
 
+// Capture shell env SEBELUM dotenv sentuh apa pun
+$shellSecret = getenv('JWT_SECRET') ?: null;
+
 $dotenv = Dotenv::createImmutable(dirname(__DIR__));
 $dotenv->safeLoad();
+
+// Prioritas: shell env → $_SERVER → $_ENV
+$jwtSecret = $shellSecret
+    ?? $_SERVER['JWT_SECRET']
+    ?? $_ENV['JWT_SECRET']
+    ?? '';
+
+if (strlen($jwtSecret) < 32) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Server misconfigured']);
+    exit;
+}
 
 date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'Asia/Jakarta');
 

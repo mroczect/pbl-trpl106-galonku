@@ -46,24 +46,32 @@ class App
     private function registerCors(): void
     {
         $cors = require dirname(__DIR__, 2) . '/config/cors.php';
-    
-        $origin = null;
+
+        $allowed = $cors['allowed_origins'];
+        $origin  = null;
+
         if (isset($_SERVER['HTTP_ORIGIN'])) {
-            $allowed = $cors['allowed_origins'];
-            if (in_array('*', $allowed, true) || in_array($_SERVER['HTTP_ORIGIN'], $allowed, true)) {
-                $origin = $_SERVER['HTTP_ORIGIN'];
+            $requestOrigin = $_SERVER['HTTP_ORIGIN'];
+
+            if (in_array('*', $allowed, true)) {
+                $origin = $requestOrigin;
+                $cors['credentials'] = false;
+            } elseif (in_array($requestOrigin, $allowed, true)) {
+                $origin = $requestOrigin;
             }
         }
-    
+
         if ($origin) {
             header("Access-Control-Allow-Origin: $origin");
+            header('Vary: Origin');
         }
         header("Access-Control-Allow-Methods: {$cors['allowed_methods']}");
         header("Access-Control-Allow-Headers: {$cors['allowed_headers']}");
+
         if ($cors['credentials']) {
             header('Access-Control-Allow-Credentials: true');
         }
-    
+
         if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
             http_response_code(204);
             exit;
@@ -75,6 +83,6 @@ class App
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
         header('Referrer-Policy: no-referrer');
-        header('X-XSS-Protection: 1; mode=block');
+        header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
     }
 }

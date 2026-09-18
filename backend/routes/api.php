@@ -15,12 +15,12 @@ use App\Middleware\{AuthMiddleware, RoleMiddleware, RateLimitMiddleware};
 
 $router->group(['prefix' => '/api/v1'], function (Router $router) {
 
-	$router->post('/auth/register', [AuthController::class, 'register'],
-    [RateLimitMiddleware::class . ':register:5:3600']);
-	$router->post('/auth/login',    [AuthController::class, 'login'],
-    [RateLimitMiddleware::class . ':login:5:60']);
-	$router->post('/auth/refresh',  [AuthController::class, 'refresh'],
-    [RateLimitMiddleware::class . ':refresh:20:60']);
+    $router->post('/auth/register', [AuthController::class, 'register'],
+        [RateLimitMiddleware::class . ':register:5:3600']);
+    $router->post('/auth/login',    [AuthController::class, 'login'],
+        [RateLimitMiddleware::class . ':login:5:60']);
+    $router->post('/auth/refresh',  [AuthController::class, 'refresh'],
+        [RateLimitMiddleware::class . ':refresh:20:60']);
 
     $router->group(['middleware' => [AuthMiddleware::class]], function (Router $router) {
 

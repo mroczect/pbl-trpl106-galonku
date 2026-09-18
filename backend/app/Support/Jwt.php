@@ -7,6 +7,20 @@ use App\Core\Database;
 
 class Jwt
 {
+	private static function secret(): string
+	{
+    $secret = $_SERVER['JWT_SECRET']
+        ?? $_ENV['JWT_SECRET']
+        ?? (getenv('JWT_SECRET') ?: '');
+	
+    if (strlen($secret) < 32) {
+        throw new \RuntimeException(
+            'JWT_SECRET must be set and at least 32 characters long.'
+        );
+    }
+    return $secret;
+	}
+
     public static function access(array $payload): string
     {
         return self::encode($payload, 'access');
@@ -19,7 +33,7 @@ class Jwt
 
     private static function encode(array $payload, string $type): string
     {
-        $secret = $_ENV['JWT_SECRET'] ?? 'secret';
+        $secret = self::secret();
         $ttl = $type === 'access'
             ? (int) ($_ENV['JWT_ACCESS_EXPIRE'] ?? 3600)
             : (int) ($_ENV['JWT_REFRESH_EXPIRE'] ?? 2592000);
@@ -51,7 +65,7 @@ class Jwt
     private static function decode(string $token): ?array
     {
         try {
-            $secret  = $_ENV['JWT_SECRET'] ?? 'secret';
+            $secret  = self::secret();
             $decoded = FirebaseJWT::decode($token, new Key($secret, 'HS256'));
             return (array) $decoded;
         } catch (\Throwable $e) {

@@ -13,7 +13,7 @@ class Auth
     public static function setRequest(Request $req): void
     {
         self::$request = $req;
-        self::$user    = null; 
+        self::$user    = null;
     }
 
     public static function reset(): void
@@ -76,7 +76,13 @@ class Auth
 
         if (Jwt::isBlacklisted($token)) return null;
 
-        self::$user = User::find((int) $payload['sub']);
+        $user = User::find((int) $payload['sub']);
+
+        if (!$user || (int) $user['is_active'] !== 1) {
+            return null;
+        }
+
+        self::$user = $user;
         return self::$user;
     }
 

@@ -1,0 +1,13 @@
+backend/vendor/
+backend/storage/
+backend/composer.json
+backend/composer.lock
+backend/.phpunit.cache/
+backend/phpunit.xml
+**/*.php
+**/*.sql
+
+frontend/node_modules/
+frontend/dist/
+frontend/bun.lock
+*.lock

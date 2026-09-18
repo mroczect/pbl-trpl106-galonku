@@ -13,37 +13,53 @@ class TransactionService
         return Database::transaction(function () use ($data, $userId) {
             $db = Database::connect();
 
-            $invoiceNo = 'INV-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
-            $totalAmount = 0;
-            $itemsData = [];
+            $custStmt = $db->prepare(
+                "SELECT id FROM customers WHERE id = ? AND is_active = 1 LIMIT 1"
+            );
+            $custStmt->execute([(int) $data['customer_id']]);
+            if (!$custStmt->fetchColumn()) {
+                throw new NotFoundException('Customer not found');
+            }
 
+            $aggregated = [];
             foreach ($data['items'] as $item) {
+                $pid = (int) $item['product_id'];
+                $qty = (int) $item['qty'];
+
+                if ($qty < 1) {
+                    throw new \InvalidArgumentException('Quantity must be at least 1');
+                }
+
+                $aggregated[$pid] = ($aggregated[$pid] ?? 0) + $qty;
+            }
+
+            $invoiceNo   = 'INV-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
+            $totalAmount = 0;
+            $itemsData   = [];
+
+            foreach ($aggregated as $productId => $totalQty) {
                 $stmt = $db->prepare(
                     "SELECT * FROM products WHERE id = ? AND is_active = 1 FOR UPDATE"
                 );
-                $stmt->execute([(int) $item['product_id']]);
+                $stmt->execute([$productId]);
                 $product = $stmt->fetch();
 
                 if (!$product) {
-                    throw new NotFoundException("Product ID {$item['product_id']} not found");
+                    throw new NotFoundException("Product ID $productId not found");
                 }
 
-                $qty = (int) $item['qty'];
-                if ($qty < 1) throw new \InvalidArgumentException('Quantity must be at least 1');
-
-                if ((int) $product['stock'] < $qty) {
+                if ((int) $product['stock'] < $totalQty) {
                     throw new \RuntimeException("Insufficient stock for {$product['name']}");
                 }
 
-                $subtotal = (float) $product['price'] * $qty;
+                $subtotal = (float) $product['price'] * $totalQty;
                 $totalAmount += $subtotal;
 
                 $itemsData[] = [
-                    'product_id' => (int) $product['id'],
-                    'qty'        => $qty,
+                    'product_id' => $productId,
+                    'qty'        => $totalQty,
                     'unit_price' => (float) $product['price'],
                     'subtotal'   => $subtotal,
-                    'name'       => $product['name'],
                 ];
             }
 
@@ -64,6 +80,10 @@ class TransactionService
                  VALUES (?, ?, ?, ?, ?)"
             );
 
+            $updateStock = $db->prepare(
+                "UPDATE products SET stock = stock - ? WHERE id = ?"
+            );
+
             foreach ($itemsData as $it) {
                 $stmt->execute([
                     $trxId,
@@ -73,8 +93,7 @@ class TransactionService
                     $it['subtotal'],
                 ]);
 
-                $db->prepare("UPDATE products SET stock = stock - ? WHERE id = ?")
-                   ->execute([$it['qty'], $it['product_id']]);
+                $updateStock->execute([$it['qty'], $it['product_id']]);
             }
 
             Log::create([
@@ -89,7 +108,9 @@ class TransactionService
                 ]),
             ]);
 
-            AppLogger::logger()->info("Transaction $invoiceNo created", ['total' => $totalAmount]);
+            AppLogger::logger()->info("Transaction $invoiceNo created", [
+                'total' => $totalAmount,
+            ]);
 
             return [
                 'id'           => $trxId,

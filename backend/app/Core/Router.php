@@ -50,7 +50,7 @@ class Router
 
     public function dispatch(Request $req): void
     {
-    	\App\Core\Auth::setRequest($req);
+        \App\Core\Auth::setRequest($req);
         $allowedMethods = [];
 
         foreach ($this->routes as $route) {
@@ -94,8 +94,9 @@ class Router
         foreach ($middleware as $mw) {
             if (is_string($mw)) {
                 if (str_contains($mw, ':')) {
-                    [$class, $params] = explode(':', $mw, 2);
-                    $args = array_map('trim', explode(',', $params));
+                    $parts = explode(':', $mw);
+                    $class = array_shift($parts);
+                    $args  = array_map('trim', $parts);
                     if (class_exists($class)) {
                         $class::handle($req, ...$args);
                     }

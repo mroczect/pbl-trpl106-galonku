@@ -14,9 +14,19 @@ class AppLogger
     {
         if (self::$logger === null) {
             $path = dirname(__DIR__, 2) . '/storage/logs/app.log';
-            self::$logger = new Logger('galonku');
-            self::$logger->pushHandler(new StreamHandler($path, Level::Debug));
+
+            try {
+                $dir = dirname($path);
+                if (!is_dir($dir)) mkdir($dir, 0775, true);
+
+                self::$logger = new Logger('galonku');
+                self::$logger->pushHandler(new StreamHandler($path, Level::Debug));
+            } catch (\Throwable $e) {
+                self::$logger = new Logger('galonku');
+                self::$logger->pushHandler(new \Monolog\Handler\NullHandler());
+            }
         }
+
         return self::$logger;
     }
 

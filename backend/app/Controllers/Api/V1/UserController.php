@@ -3,6 +3,7 @@ namespace App\Controllers\Api\V1;
 
 use App\Core\{Request, Response, Auth};
 use App\Models\User;
+use App\Models\Role;
 use App\Support\AppLogger;
 use App\Exceptions\NotFoundException;
 
@@ -43,6 +44,19 @@ class UserController
         ]);
 
         if (empty($data)) Response::error('No data to update');
+
+        if (isset($data['role_id'])) {
+            if (!Role::find((int) $data['role_id'])) {
+                Response::error('Role not found', 422, [
+                    'role_id' => ['Role not found'],
+                ]);
+            }
+            $data['role_id'] = (int) $data['role_id'];
+        }
+
+        if (isset($data['is_active'])) {
+            $data['is_active'] = (int) $data['is_active'];
+        }
 
         User::update($id, $data);
         AppLogger::action(Auth::id(), 'update', 'user', $id, $data);

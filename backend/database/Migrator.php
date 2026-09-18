@@ -47,7 +47,13 @@ class Migrator
 
     private function ensureDatabase(): void
     {
-        $name = $_ENV['DB_DATABASE'];
+        $config = require dirname(__DIR__) . '/config/database.php';
+        $name   = $_ENV['DB_DATABASE'] ?? $config['database'] ?? 'galonku_db';
+    
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
+            throw new \InvalidArgumentException('Invalid database name');
+        }
+    
         $this->pdo->exec(
             "CREATE DATABASE IF NOT EXISTS `$name`
              CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"

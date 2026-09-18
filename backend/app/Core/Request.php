@@ -72,9 +72,22 @@ class Request
 
     public function ip(): ?string
     {
-        return $_SERVER['HTTP_X_FORWARDED_FOR']
-            ?? $_SERVER['REMOTE_ADDR']
-            ?? null;
+        $trustedProxies = array_filter(
+            array_map('trim', explode(',', $_ENV['TRUSTED_PROXIES'] ?? ''))
+        );
+        $remote = $_SERVER['REMOTE_ADDR'] ?? null;
+
+        if ($remote && in_array($remote, $trustedProxies, true)) {
+            $xff = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? null;
+            if ($xff) {
+                $first = trim(explode(',', $xff)[0]);
+                if (filter_var($first, FILTER_VALIDATE_IP)) {
+                    return $first;
+                }
+            }
+        }
+
+        return $remote;
     }
 
     public function userAgent(): ?string
@@ -107,6 +120,7 @@ class Request
 
         return $headers;
     }
+
     public static function create(
         string $method,
         string $path,
