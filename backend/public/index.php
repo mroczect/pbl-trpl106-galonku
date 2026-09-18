@@ -6,13 +6,11 @@ use Dotenv\Dotenv;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-// Capture shell env SEBELUM dotenv sentuh apa pun
 $shellSecret = getenv('JWT_SECRET') ?: null;
 
 $dotenv = Dotenv::createImmutable(dirname(__DIR__));
 $dotenv->safeLoad();
 
-// Prioritas: shell env → $_SERVER → $_ENV
 $jwtSecret = $shellSecret
     ?? $_SERVER['JWT_SECRET']
     ?? $_ENV['JWT_SECRET']
