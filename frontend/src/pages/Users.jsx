@@ -33,11 +33,11 @@ export default function Users() {
 
   const toggle = async (u) => {
     try {
-      await usersApi.update(u.id, { is_active: u.is_active ? 0 : 1 });
-      toast.success("User diperbarui");
+      await usersApi.update(u.id, { is_active: u.is_active ? false : true });
+      toast.success(u.is_active ? "User dinonaktifkan" : "User diaktifkan");
       load();
-    } catch {
-      toast.error("Gagal");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Gagal memperbarui user");
     }
   };
 
