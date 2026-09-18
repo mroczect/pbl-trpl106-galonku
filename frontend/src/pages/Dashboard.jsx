@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { productsApi } from "../api/products";
 import { transactionsApi } from "../api/transactions";
 import { customersApi } from "../api/customers";
-import { Card } from "../components/ui";
+import { Card, Loading } from "../components/ui";
 import {
   Package,
   Receipt,
@@ -12,6 +12,9 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
+
+const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -22,8 +25,11 @@ export default function Dashboard() {
     customers: 0,
   });
   const [recent, setRecent] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     Promise.all([
       productsApi.list({ per_page: 1 }),
       productsApi.lowStock(10),
@@ -32,15 +38,25 @@ export default function Dashboard() {
       transactionsApi.list({ per_page: 5 }),
     ])
       .then(([p, l, t, c, recentTx]) => {
+        if (cancelled) return;
         setStats({
-          products: p.data.meta?.total || 0,
-          lowStock: l.data.data?.length || 0,
-          transactions: t.data.meta?.total || 0,
-          customers: c.data.meta?.total || 0,
+          products: num(p.data?.meta?.total),
+          lowStock: Array.isArray(l.data?.data) ? l.data.data.length : 0,
+          transactions: num(t.data?.meta?.total),
+          customers: num(c.data?.meta?.total),
         });
-        setRecent(recentTx.data.data || []);
+        setRecent(Array.isArray(recentTx.data?.data) ? recentTx.data.data : []);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) toast.error("Gagal memuat ringkasan");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const cards = [
@@ -74,11 +90,13 @@ export default function Dashboard() {
     },
   ];
 
+  if (loading) return <Loading />;
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-stone-900">
-          Halo, {user?.name?.split(" ")[0]} 👋
+          Halo, {user?.name?.split(" ")[0] ?? "User"} 👋
         </h1>
         <p className="text-sm text-stone-500 mt-0.5">
           Ringkasan aktivitas depot hari ini
@@ -131,7 +149,7 @@ export default function Dashboard() {
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-stone-900 truncate">
-                    {t.customer_name}
+                    {t.customer_name ?? "—"}
                   </p>
                   <p className="text-xs text-stone-400 font-mono">
                     {t.invoice_no}
@@ -139,7 +157,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right shrink-0 ml-4">
                   <p className="text-sm font-medium text-stone-900">
-                    Rp {Number(t.total_amount).toLocaleString("id-ID")}
+                    Rp {Number(t.total_amount ?? 0).toLocaleString("id-ID")}
                   </p>
                   <p className="text-xs text-stone-400 capitalize">
                     {t.status}
