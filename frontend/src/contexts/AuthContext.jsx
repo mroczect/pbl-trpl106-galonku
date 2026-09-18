@@ -1,62 +1,97 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { authApi } from "../api/auth";
+import { tokenStore } from "../api/client";
 
 const AuthContext = createContext(null);
 
+function bootstrapAuth() {
+  const token = tokenStore.getAccess();
+
+  if (!token) {
+    tokenStore.clear();
+    return Promise.resolve({ user: null });
+  }
+
+  return authApi
+    .me()
+    .then((res) => {
+      const u = res.data?.data ?? null;
+      if (u) {
+        tokenStore.setUser(u);
+        return { user: u };
+      }
+      tokenStore.clear();
+      return { user: null };
+    })
+    .catch(() => {
+      tokenStore.clear();
+      return { user: null };
+    });
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const raw = localStorage.getItem("user");
-    return raw ? JSON.parse(raw) : null;
+    const token = tokenStore.getAccess();
+    return token ? tokenStore.getUser() : null;
   });
   const [loading, setLoading] = useState(true);
+  const bootPromise = useRef(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      setLoading(false);
-      return;
+    if (!bootPromise.current) {
+      bootPromise.current = bootstrapAuth();
     }
-    authApi
-      .me()
-      .then((res) => {
-        setUser(res.data.data);
-        localStorage.setItem("user", JSON.stringify(res.data.data));
+
+    let cancelled = false;
+
+    bootPromise.current
+      .then((result) => {
+        if (cancelled) return;
+        setUser(result.user);
       })
-      .catch(() => {
-        localStorage.clear();
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const res = await authApi.login({ email, password });
-    const { user, access_token, refresh_token } = res.data.data;
-    localStorage.setItem("access_token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
-    localStorage.setItem("user", JSON.stringify(user));
-    setUser(user);
-    return user;
-  };
+    const payload = res.data?.data ?? {};
+    const { user: u, access_token, refresh_token } = payload;
+    tokenStore.set(access_token, refresh_token, u);
+    setUser(u);
+    return u;
+  }, []);
 
-  const register = async (payload) => {
+  const register = useCallback(async (payload) => {
     const res = await authApi.register(payload);
-    return res.data.data;
-  };
+    return res.data?.data ?? null;
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
-      await authApi.logout();
-    } catch {}
-    localStorage.clear();
-    setUser(null);
-  };
+      const refresh = tokenStore.getRefresh();
+      await authApi.logout(refresh ? { refresh_token: refresh } : {});
+    } catch {
+    } finally {
+      tokenStore.clear();
+      setUser(null);
+    }
+  }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = { user, loading, login, register, logout };
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

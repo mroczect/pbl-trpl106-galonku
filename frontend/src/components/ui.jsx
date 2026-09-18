@@ -1,4 +1,5 @@
-import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
+import { Loader2, X } from "lucide-react";
 
 /* ---------- Button ---------- */
 export function Button({
@@ -48,7 +49,9 @@ export function Input({ label, hint, error, className = "", ...props }) {
       )}
       <input
         {...props}
-        className={`w-full h-9 px-3 text-sm bg-white border border-stone-200 rounded-lg placeholder:text-stone-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 disabled:bg-stone-50 disabled:text-stone-500 transition ${error ? "border-rose-400" : ""}`}
+        className={`w-full h-9 px-3 text-sm bg-white border border-stone-200 rounded-lg placeholder:text-stone-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 disabled:bg-stone-50 disabled:text-stone-500 transition ${
+          error ? "border-rose-400" : ""
+        }`}
       />
       {hint && !error && <p className="text-xs text-stone-400 mt-1">{hint}</p>}
       {error && <p className="text-xs text-rose-600 mt-1">{error}</p>}
@@ -93,10 +96,33 @@ export function Badge({ variant = "default", children }) {
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${variants[variant]}`}
+      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
+        variants[variant] ?? variants.default
+      }`}
     >
       {children}
     </span>
+  );
+}
+
+export function StatusBadge({ status }) {
+  const map = {
+    pending: "warning",
+    paid: "success",
+    partial: "info",
+    cancelled: "danger",
+    on_route: "info",
+    done: "success",
+  };
+
+  if (typeof status !== "string" || status.length === 0) {
+    return <Badge variant="default">—</Badge>;
+  }
+
+  return (
+    <Badge variant={map[status] || "default"}>
+      {status.replace(/_/g, " ")}
+    </Badge>
   );
 }
 
@@ -139,16 +165,92 @@ export function Loading() {
   );
 }
 
-export function StatusBadge({ status }) {
-  const map = {
-    pending: "warning",
-    paid: "success",
-    partial: "info",
-    cancelled: "danger",
-    on_route: "info",
-    done: "success",
+export function Modal({ open, onClose, title, children, size = "md" }) {
+  useEffect(() => {
+    if (!open) return;
+
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const sizes = {
+    sm: "max-w-sm",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-3xl",
   };
+
   return (
-    <Badge variant={map[status] || "default"}>{status.replace("_", " ")}</Badge>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className={`bg-white rounded-xl w-full shadow-xl ${sizes[size]} max-h-[90vh] flex flex-col`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {title && (
+          <div className="px-6 py-4 border-b border-stone-200 flex items-center justify-between shrink-0">
+            <h2 className="text-sm font-semibold text-stone-900">{title}</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 text-stone-400 hover:text-stone-700 rounded-md"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        <div className="overflow-auto">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export function ConfirmDialog({
+  open,
+  title = "Konfirmasi",
+  message,
+  confirmLabel = "Ya, lanjutkan",
+  cancelLabel = "Batal",
+  variant = "danger",
+  loading = false,
+  onConfirm,
+  onCancel,
+}) {
+  return (
+    <Modal open={open} onClose={onCancel} title={title} size="sm">
+      <div className="p-6">
+        <p className="text-sm text-stone-600">{message}</p>
+        <div className="flex gap-2 mt-5">
+          <Button
+            variant={variant}
+            className="flex-1"
+            loading={loading}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </Button>
+          <Button variant="secondary" onClick={onCancel} disabled={loading}>
+            {cancelLabel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

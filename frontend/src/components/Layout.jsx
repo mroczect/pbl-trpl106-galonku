@@ -44,21 +44,14 @@ const menu = [
     roles: ["admin", "kurir"],
   },
 ];
+
 const adminMenu = [
-  { to: "/users", label: "Users", icon: Shield },
-  { to: "/logs", label: "Activity Logs", icon: ScrollText },
+  { to: "/users", label: "Users", icon: Shield, roles: ["admin"] },
+  { to: "/logs", label: "Activity Logs", icon: ScrollText, roles: ["admin"] },
 ];
 
-export default function Layout() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
-
-  const NavItem = ({ to, label, icon: Icon }) => (
+function NavItem({ to, label, icon: Icon }) {
+  return (
     <NavLink
       to={to}
       className={({ isActive }) =>
@@ -73,10 +66,23 @@ export default function Layout() {
       <span className="truncate">{label}</span>
     </NavLink>
   );
+}
+
+export default function Layout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const role = user?.role_name ?? user?.role ?? null;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
+
+  const visibleMenu = role ? menu.filter((m) => m.roles.includes(role)) : [];
 
   return (
     <div className="flex min-h-screen bg-stone-50">
-      {}
       <aside className="w-60 bg-white border-r border-stone-200 flex flex-col shrink-0">
         <div className="h-14 px-4 flex items-center gap-2 border-b border-stone-200">
           <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
@@ -86,13 +92,11 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {menu
-            .filter((m) => m.roles.includes(user?.role_name))
-            .map((m) => (
-              <NavItem key={m.to} {...m} />
-            ))}
+          {visibleMenu.map((m) => (
+            <NavItem key={m.to} {...m} />
+          ))}
 
-          {user?.role_name === "admin" && (
+          {role === "admin" && (
             <>
               <div className="pt-4 pb-1 px-3">
                 <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
@@ -109,17 +113,18 @@ export default function Layout() {
         <div className="p-3 border-t border-stone-200">
           <div className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-stone-50">
             <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-xs font-semibold shrink-0">
-              {user?.name?.charAt(0)?.toUpperCase()}
+              {user?.name?.charAt(0)?.toUpperCase() ?? "?"}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-stone-900 truncate">
-                {user?.name}
+                {user?.name ?? "—"}
               </p>
               <p className="text-[11px] text-stone-500 capitalize truncate">
-                {user?.role_name}
+                {role ?? "—"}
               </p>
             </div>
             <button
+              type="button"
               onClick={handleLogout}
               title="Logout"
               className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
@@ -130,7 +135,6 @@ export default function Layout() {
         </div>
       </aside>
 
-      {}
       <main className="flex-1 min-w-0 overflow-auto">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <Outlet />

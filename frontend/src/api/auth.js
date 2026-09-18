@@ -5,5 +5,5 @@ export const authApi = {
   login: (data) => client.post("/auth/login", data),
   refresh: (refresh_token) => client.post("/auth/refresh", { refresh_token }),
   me: () => client.get("/auth/me"),
-  logout: () => client.post("/auth/logout"),
+  logout: (data = {}) => client.post("/auth/logout", data),
 };

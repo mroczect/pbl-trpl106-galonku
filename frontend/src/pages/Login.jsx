@@ -15,11 +15,23 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const user = await login(form.email, form.password);
-      toast.success(`Welcome back, ${user.name}`);
-      navigate("/dashboard");
+      const u = await login(form.email, form.password);
+      toast.success(`Welcome back, ${u.name}`);
+      navigate("/dashboard", { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || "Login failed");
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+
+      if (status === 429) {
+        const retry = err.response?.headers?.["retry-after"];
+        toast.error(
+          `Terlalu banyak percobaan. Coba lagi dalam ${retry || 60} detik.`,
+        );
+      } else if (status === 401) {
+        toast.error("Email atau password salah");
+      } else {
+        toast.error(msg || "Login gagal");
+      }
     } finally {
       setLoading(false);
     }
@@ -76,6 +88,7 @@ export default function Login() {
               label="Email"
               type="email"
               required
+              autoComplete="email"
               placeholder="admin@galonku.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -84,6 +97,7 @@ export default function Login() {
               label="Password"
               type="password"
               required
+              autoComplete="current-password"
               placeholder="••••••••"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -108,28 +122,31 @@ export default function Login() {
             </Link>
           </p>
 
-          <div className="mt-8 pt-6 border-t border-stone-200">
-            <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-3">
-              Demo accounts
-            </p>
-            <div className="space-y-1.5">
-              {[
-                ["admin@galonku.com", "admin123", "Admin"],
-                ["kurir@galonku.com", "kurir123", "Courier"],
-                ["user@galonku.com", "pelanggan123", "Customer"],
-              ].map(([email, password, role]) => (
-                <button
-                  key={email}
-                  type="button"
-                  onClick={() => fill(email, password)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg border border-stone-200 hover:border-brand-300 hover:bg-brand-50/50 transition text-left"
-                >
-                  <span className="text-stone-700 font-medium">{role}</span>
-                  <span className="text-stone-400">{email}</span>
-                </button>
-              ))}
+          {}
+          {import.meta.env.DEV && (
+            <div className="mt-8 pt-6 border-t border-stone-200">
+              <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-3">
+                Demo accounts (dev only)
+              </p>
+              <div className="space-y-1.5">
+                {[
+                  ["admin@galonku.com", "admin123", "Admin"],
+                  ["kurir@galonku.com", "kurir123", "Courier"],
+                  ["user@galonku.com", "pelanggan123", "Customer"],
+                ].map(([email, password, role]) => (
+                  <button
+                    key={email}
+                    type="button"
+                    onClick={() => fill(email, password)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg border border-stone-200 hover:border-brand-300 hover:bg-brand-50/50 transition text-left"
+                  >
+                    <span className="text-stone-700 font-medium">{role}</span>
+                    <span className="text-stone-400">{email}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

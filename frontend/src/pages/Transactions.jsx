@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { transactionsApi } from "../api/transactions";
 import { customersApi } from "../api/customers";
 import { productsApi } from "../api/products";
@@ -10,17 +10,28 @@ import {
   Loading,
   StatusBadge,
   Select,
+  Input,
 } from "../components/ui";
 import toast from "react-hot-toast";
 import { Plus, Receipt, X, Trash2 } from "lucide-react";
+
+const emptyItem = () => ({ product_id: "", qty: 1 });
 
 export default function Transactions() {
   const [items, setItems] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ customer_id: "", items: [] });
+  const [form, setForm] = useState({
+    customer_id: "",
+    type: "sale",
+    paid_amount: "",
+    status: "pending",
+    notes: "",
+    items: [emptyItem()],
+  });
 
   const load = async () => {
     setLoading(true);
@@ -30,9 +41,9 @@ export default function Transactions() {
         customersApi.list({ per_page: 100 }),
         productsApi.list({ per_page: 100 }),
       ]);
-      setItems(t.data.data || []);
-      setCustomers(c.data.data || []);
-      setProducts(p.data.data || []);
+      setItems(t.data?.data ?? []);
+      setCustomers(c.data?.data ?? []);
+      setProducts(p.data?.data ?? []);
     } catch {
       toast.error("Gagal memuat data");
     } finally {
@@ -45,37 +56,88 @@ export default function Transactions() {
   }, []);
 
   const openCreate = () => {
-    setForm({ customer_id: "", items: [{ product_id: "", qty: 1 }] });
+    setForm({
+      customer_id: "",
+      type: "sale",
+      paid_amount: "",
+      status: "pending",
+      notes: "",
+      items: [emptyItem()],
+    });
     setShowForm(true);
   };
 
   const addItem = () =>
-    setForm({ ...form, items: [...form.items, { product_id: "", qty: 1 }] });
+    setForm((f) => ({ ...f, items: [...f.items, emptyItem()] }));
 
-  const updateItem = (i, key, val) => {
-    const next = [...form.items];
-    next[i][key] = val;
-    setForm({ ...form, items: next });
-  };
+  const updateItem = (i, key, val) =>
+    setForm((f) => {
+      const items = [...f.items];
+      items[i] = { ...items[i], [key]: val };
+      return { ...f, items };
+    });
 
   const removeItem = (i) =>
-    setForm({ ...form, items: form.items.filter((_, idx) => idx !== i) });
+    setForm((f) => ({
+      ...f,
+      items: f.items.filter((_, idx) => idx !== i),
+    }));
+
+  const productMap = useMemo(() => {
+    const m = new Map();
+    products.forEach((p) => m.set(String(p.id), p));
+    return m;
+  }, [products]);
+
+  const totalPreview = useMemo(() => {
+    return form.items.reduce((sum, it) => {
+      const p = productMap.get(String(it.product_id));
+      if (!p) return sum;
+      return sum + Number(p.price) * Number(it.qty || 0);
+    }, 0);
+  }, [form.items, productMap]);
 
   const submit = async (e) => {
     e.preventDefault();
+
+    const validItems = form.items
+      .filter((it) => it.product_id && Number(it.qty) >= 1)
+      .map((it) => ({
+        product_id: Number(it.product_id),
+        qty: Number(it.qty),
+      }));
+
+    if (!form.customer_id) {
+      toast.error("Pilih pelanggan");
+      return;
+    }
+    if (validItems.length === 0) {
+      toast.error("Minimal 1 item dengan produk dan qty ≥ 1");
+      return;
+    }
+
+    setSubmitting(true);
     try {
       await transactionsApi.create({
         customer_id: Number(form.customer_id),
-        items: form.items.map((it) => ({
-          product_id: Number(it.product_id),
-          qty: Number(it.qty),
-        })),
+        type: form.type,
+        status: form.status,
+        paid_amount: form.paid_amount === "" ? 0 : Number(form.paid_amount),
+        notes: form.notes || null,
+        items: validItems,
       });
       toast.success("Transaksi dibuat");
       setShowForm(false);
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Gagal membuat transaksi");
+      const data = err.response?.data;
+      const errors = data?.errors;
+      const message = errors
+        ? Object.values(errors).flat().join(", ")
+        : data?.message || "Gagal membuat transaksi";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -85,7 +147,7 @@ export default function Transactions() {
       toast.success("Status diperbarui");
       load();
     } catch {
-      toast.error("Gagal");
+      toast.error("Gagal memperbarui status");
     }
   };
 
@@ -134,10 +196,10 @@ export default function Transactions() {
                     {t.invoice_no}
                   </td>
                   <td className="px-5 py-3 font-medium text-stone-900">
-                    {t.customer_name}
+                    {t.customer_name ?? "—"}
                   </td>
                   <td className="px-5 py-3 text-right tabular-nums">
-                    Rp {Number(t.total_amount).toLocaleString("id-ID")}
+                    Rp {Number(t.total_amount ?? 0).toLocaleString("id-ID")}
                   </td>
                   <td className="px-5 py-3 text-center">
                     <StatusBadge status={t.status} />
@@ -171,6 +233,7 @@ export default function Transactions() {
                 Transaksi baru
               </h2>
               <button
+                type="button"
                 onClick={() => setShowForm(false)}
                 className="p-1 text-stone-400 hover:text-stone-700 rounded-md"
               >
@@ -194,6 +257,40 @@ export default function Transactions() {
                 ))}
               </Select>
 
+              <div className="grid grid-cols-3 gap-3">
+                <Select
+                  label="Tipe"
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                >
+                  {["sale", "delivery", "return"].map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  label="Status"
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                >
+                  {["pending", "paid", "partial", "cancelled"].map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  label="Dibayar (Rp)"
+                  type="number"
+                  min="0"
+                  value={form.paid_amount}
+                  onChange={(e) =>
+                    setForm({ ...form, paid_amount: e.target.value })
+                  }
+                />
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-medium text-stone-700">
@@ -208,45 +305,65 @@ export default function Transactions() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {form.items.map((it, i) => (
-                    <div key={i} className="flex gap-2">
-                      <select
-                        required
-                        value={it.product_id}
-                        onChange={(e) =>
-                          updateItem(i, "product_id", e.target.value)
-                        }
-                        className="flex-1 h-9 px-3 text-sm bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-brand-500"
-                      >
-                        <option value="">Pilih produk</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} (stok: {p.stock})
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={it.qty}
-                        onChange={(e) => updateItem(i, "qty", e.target.value)}
-                        className="w-20 h-9 px-3 text-sm bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-brand-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeItem(i)}
-                        className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                  {form.items.map((it, i) => {
+                    const p = productMap.get(String(it.product_id));
+                    const max = p ? Number(p.stock) : null;
+                    return (
+                      <div key={i} className="flex gap-2 items-start">
+                        <select
+                          required
+                          value={it.product_id}
+                          onChange={(e) =>
+                            updateItem(i, "product_id", e.target.value)
+                          }
+                          className="flex-1 h-9 px-3 text-sm bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-brand-500"
+                        >
+                          <option value="">Pilih produk</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} (stok: {p.stock})
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="1"
+                          max={max ?? undefined}
+                          required
+                          value={it.qty}
+                          onChange={(e) => updateItem(i, "qty", e.target.value)}
+                          className="w-20 h-9 px-3 text-sm bg-white border border-stone-200 rounded-lg focus:outline-none focus:border-brand-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeItem(i)}
+                          disabled={form.items.length === 1}
+                          className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition disabled:opacity-30"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
+                {totalPreview > 0 && (
+                  <p className="text-right text-sm text-stone-600 mt-2">
+                    Estimasi total:{" "}
+                    <span className="font-semibold text-stone-900">
+                      Rp {totalPreview.toLocaleString("id-ID")}
+                    </span>
+                  </p>
+                )}
               </div>
 
+              <Input
+                label="Catatan"
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+
               <div className="flex gap-2 pt-2">
-                <Button type="submit" className="flex-1">
+                <Button type="submit" className="flex-1" loading={submitting}>
                   Buat transaksi
                 </Button>
                 <Button
