@@ -23,6 +23,8 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+
         Response::$testMode = true;
         Auth::reset();
 
@@ -34,6 +36,8 @@ abstract class TestCase extends BaseTestCase
     {
         Response::$testMode = false;
         Auth::reset();
+
+        $this->tearDownDatabase();
 
         parent::tearDown();
     }
