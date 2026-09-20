@@ -43,14 +43,15 @@ class TransactionController
             'items'       => 'required|array',
             'type'        => 'in:sale,delivery,return',
             'status'      => 'in:pending,paid,partial,cancelled',
+            'paid_amount' => 'numeric|min:0',
         ]);
-    
+
         if (empty($data['items'])) {
             Response::error('Items must not be empty', 422);
         }
-    
+
         $result = TransactionService::create($req->body(), Auth::id());
-    
+
         Response::success($result, 'Transaction created successfully', 201);
     }
 
@@ -60,12 +61,17 @@ class TransactionController
         if (!$trx) throw new NotFoundException('Transaction not found');
 
         $data = $req->validate([
-            'status' => 'required|in:pending,paid,partial,cancelled',
+            'status'      => 'required|in:pending,paid,partial,cancelled',
+            'paid_amount' => 'numeric|min:0',
         ]);
 
         $update = ['status' => $data['status']];
         if ($req->body('paid_amount') !== null) {
-            $update['paid_amount'] = (float) $req->body('paid_amount');
+            $paid = (float) $req->body('paid_amount');
+            if ($paid > (float) $trx['total_amount']) {
+                Response::error('paid_amount cannot exceed total_amount', 422);
+            }
+            $update['paid_amount'] = $paid;
         }
 
         Transaction::update($id, $update);
