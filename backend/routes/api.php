@@ -13,7 +13,7 @@ use App\Controllers\Api\V1\{
 };
 use App\Middleware\{AuthMiddleware, RoleMiddleware, RateLimitMiddleware};
 
-$router->group(['prefix' => '/api/v1'], function (Router $router) {
+ $router->group(['prefix' => '/api/v1'], function (Router $router) {
 
     $router->post('/auth/register', [AuthController::class, 'register'],
         [RateLimitMiddleware::class . ':register:5:3600']);
@@ -46,7 +46,7 @@ $router->group(['prefix' => '/api/v1'], function (Router $router) {
         $router->post('/schedules',            [ScheduleController::class, 'store']);
         $router->put('/schedules/{id}/status', [ScheduleController::class, 'updateStatus']);
 
-        $router->group(['middleware' => [RoleMiddleware::class . ':admin']], function (Router $router) {
+        $router->group(['middleware' => [RoleMiddleware::class . ':administrator']], function (Router $router) {
 
             $router->get('/users',         [UserController::class, 'index']);
             $router->get('/users/{id}',    [UserController::class, 'show']);
@@ -66,7 +66,7 @@ $router->group(['prefix' => '/api/v1'], function (Router $router) {
     });
 });
 
-$router->get('/', function () {
+ $router->get('/', function () {
     \App\Core\Response::success([
         'app'     => $_ENV['APP_NAME'] ?? 'Galonku API',
         'version' => '1.0.0',
