@@ -97,14 +97,21 @@ class Router
                     $parts = explode(':', $mw);
                     $class = array_shift($parts);
                     $args  = array_map('trim', $parts);
-                    if (class_exists($class)) {
-                        $class::handle($req, ...$args);
+
+                    if (!class_exists($class)) {
+                        throw new \RuntimeException("Middleware class not found: $class");
                     }
-                } elseif (class_exists($mw)) {
+                    $class::handle($req, ...$args);
+                } else {
+                    if (!class_exists($mw)) {
+                        throw new \RuntimeException("Middleware class not found: $mw");
+                    }
                     $mw::handle($req);
                 }
             } elseif (is_callable($mw)) {
                 $mw($req);
+            } else {
+                throw new \RuntimeException('Invalid middleware definition');
             }
         }
     }
