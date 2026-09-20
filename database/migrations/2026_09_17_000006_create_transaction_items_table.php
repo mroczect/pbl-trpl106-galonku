@@ -1,10 +1,12 @@
 <?php
-require_once __DIR__ . '/_Base.php';
+declare(strict_types=1);
+
+use Database\Migration\Migration;
 
 return new class extends Migration {
     public function up(PDO $pdo): void
     {
-        $this->table($pdo, 'transaction_items', fn() => "
+        $this->createTable($pdo, 'transaction_items', fn() => "
             CREATE TABLE `transaction_items` (
                 `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 `transaction_id` INT UNSIGNED NOT NULL,
@@ -13,7 +15,7 @@ return new class extends Migration {
                 `unit_price`     DECIMAL(12,2) NOT NULL DEFAULT 0.00,
                 `subtotal`       DECIMAL(14,2) NOT NULL DEFAULT 0.00,
                 KEY `idx_items_transaction` (`transaction_id`),
-                KEY `idx_items_product` (`product_id`),
+                KEY `idx_items_product`     (`product_id`),
                 CONSTRAINT `fk_items_product` FOREIGN KEY (`product_id`)
                     REFERENCES `products`(`id`) ON UPDATE CASCADE ON DELETE RESTRICT,
                 CONSTRAINT `fk_items_transaction` FOREIGN KEY (`transaction_id`)
@@ -25,6 +27,6 @@ return new class extends Migration {
 
     public function down(PDO $pdo): void
     {
-        $pdo->exec("DROP TABLE IF EXISTS `transaction_items`");
+        $this->dropTable($pdo, 'transaction_items');
     }
 };
