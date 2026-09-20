@@ -13,12 +13,14 @@ class RateLimitMiddleware
     ): void {
         $max    = $max    !== null ? (int) $max    : (int) ($_ENV['RATE_LIMIT_LOGIN']  ?? 5);
         $window = $window !== null ? (int) $window : (int) ($_ENV['RATE_LIMIT_WINDOW'] ?? 60);
-        $key    = $key ?? ($req->ip() . ':' . $req->path());
+
+        $prefix = $key ?? $req->path();
+        $bucket = md5($req->ip() . ':' . $prefix);
 
         $dir = dirname(__DIR__, 2) . '/storage/cache';
         if (!is_dir($dir)) mkdir($dir, 0775, true);
 
-        $file = $dir . '/rl_' . md5($key) . '.json';
+        $file = $dir . '/rl_' . $bucket . '.json';
         $now  = time();
 
         $fp = fopen($file, 'c+');
@@ -28,6 +30,7 @@ class RateLimitMiddleware
 
         try {
             if (!flock($fp, LOCK_EX)) {
+                fclose($fp);
                 return;
             }
 
@@ -46,8 +49,10 @@ class RateLimitMiddleware
             fwrite($fp, json_encode($data));
             fflush($fp);
         } finally {
-            flock($fp, LOCK_UN);
-            fclose($fp);
+            if (is_resource($fp)) {
+                flock($fp, LOCK_UN);
+                fclose($fp);
+            }
         }
 
         if ($data['count'] > $max) {
