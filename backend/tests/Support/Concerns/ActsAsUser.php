@@ -16,8 +16,8 @@ trait ActsAsUser
     }
 
     protected function loginAsAdmin(): self     { return $this->loginAs('admin@galonku.com', 'admin123'); }
-    protected function loginAsKurir(): self     { return $this->loginAs('kurir@galonku.com', 'kurir123'); }
-    protected function loginAsPelanggan(): self { return $this->loginAs('user@galonku.com', 'pelanggan123'); }
+    protected function loginAsKurir(): self     { return $this->loginAs('agent@galonku.com', 'agent123'); }
+    protected function loginAsPelanggan(): self { return $this->loginAs('customer@galonku.com', 'customer123'); }
 
     protected function withAuth(array $extra = []): array
     {
