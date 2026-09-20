@@ -47,7 +47,6 @@ use App\Middleware\{AuthMiddleware, RoleMiddleware, RateLimitMiddleware};
         $router->post('/schedules',            [ScheduleController::class, 'store']);
         $router->put('/schedules/{id}/status', [ScheduleController::class, 'updateStatus']);
 
-        // Riwayat stok — admin & agent bisa lihat
         $router->get('/stock-movements', [StockController::class, 'index']);
 
         $router->group(['middleware' => [RoleMiddleware::class . ':administrator']], function (Router $router) {
@@ -67,7 +66,6 @@ use App\Middleware\{AuthMiddleware, RoleMiddleware, RateLimitMiddleware};
 
             $router->get('/logs', [LogController::class, 'index']);
 
-            // Koreksi stok — admin only
             $router->post('/stock-movements/adjust', [StockController::class, 'adjust']);
         });
     });
