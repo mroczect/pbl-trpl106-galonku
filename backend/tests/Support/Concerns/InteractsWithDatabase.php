@@ -14,11 +14,11 @@ trait InteractsWithDatabase
 
         $this->clearRateLimitCache();
 
-        require_once dirname(__DIR__, 3) . '/database/Migrator.php';
+        require_once dirname(__DIR__, 4) . '/database/Migrator.php';
 
         $migrator = new \Migrator(
-            dirname(__DIR__, 3) . '/database/migrations',
-            dirname(__DIR__, 3) . '/database/seeders'
+            dirname(__DIR__, 4) . '/database/migrations',
+            dirname(__DIR__, 4) . '/database/seeders'
         );
 
         ob_start();
