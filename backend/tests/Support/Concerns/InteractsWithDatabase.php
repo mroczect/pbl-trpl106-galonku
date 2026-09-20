@@ -8,24 +8,39 @@ use PHPUnit\Framework\Assert;
 
 trait InteractsWithDatabase
 {
+    protected static bool $migrated = false;
+
     protected function refreshDatabase(): void
     {
         Database::reset();
-
         $this->clearRateLimitCache();
 
-        require_once dirname(__DIR__, 4) . '/database/Migrator.php';
+        if (!self::$migrated) {
+            $root = dirname(__DIR__, 4);
+            require_once $root . '/database/bootstrap.php';
 
-        $migrator = new \Migrator(
-            dirname(__DIR__, 4) . '/database/migrations',
-            dirname(__DIR__, 4) . '/database/seeders'
-        );
+            $migrator = new \Database\Migrator(
+                $root . '/database/migrations',
+                $root . '/database/seeders'
+            );
 
-        ob_start();
-        try {
-            $migrator->fresh(true);
-        } finally {
-            ob_end_clean();
+            ob_start();
+            try {
+                $migrator->fresh(true);
+            } finally {
+                ob_end_clean();
+            }
+            self::$migrated = true;
+        }
+
+        Database::connect()->beginTransaction();
+    }
+
+    protected function tearDownDatabase(): void
+    {
+        $pdo = Database::connect();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack(); 
         }
     }
 
