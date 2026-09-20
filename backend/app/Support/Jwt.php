@@ -4,22 +4,23 @@ namespace App\Support;
 use Firebase\JWT\JWT as FirebaseJWT;
 use Firebase\JWT\Key;
 use App\Core\Database;
+use App\Support\AppLogger;
 
 class Jwt
 {
-	private static function secret(): string
-	{
-    $secret = $_SERVER['JWT_SECRET']
-        ?? $_ENV['JWT_SECRET']
-        ?? (getenv('JWT_SECRET') ?: '');
-	
-    if (strlen($secret) < 32) {
-        throw new \RuntimeException(
-            'JWT_SECRET must be set and at least 32 characters long.'
-        );
+    private static function secret(): string
+    {
+        $secret = $_SERVER['JWT_SECRET']
+            ?? $_ENV['JWT_SECRET']
+            ?? (getenv('JWT_SECRET') ?: '');
+
+        if (strlen($secret) < 32) {
+            throw new \RuntimeException(
+                'JWT_SECRET must be set and at least 32 characters long.'
+            );
+        }
+        return $secret;
     }
-    return $secret;
-	}
 
     public static function access(array $payload): string
     {
@@ -78,6 +79,11 @@ class Jwt
         $decoded = self::decode($token);
         if (!$decoded || !isset($decoded['jti'])) return;
 
+        self::blacklistByJti($decoded['jti'], (int) $decoded['exp']);
+    }
+
+    public static function blacklistByJti(string $jti, int $exp): void
+    {
         try {
             $stmt = Database::connect()->prepare(
                 "INSERT INTO jwt_blacklist (jti, expires_at, created_at)
@@ -85,10 +91,15 @@ class Jwt
                  ON DUPLICATE KEY UPDATE created_at = NOW()"
             );
             $stmt->execute([
-                $decoded['jti'],
-                date('Y-m-d H:i:s', (int) $decoded['exp']),
+                $jti,
+                date('Y-m-d H:i:s', $exp),
             ]);
         } catch (\Throwable $e) {
+            AppLogger::logger()->error('JWT blacklist failed', [
+                'jti' => $jti,
+                'error' => $e->getMessage(),
+            ]);
+            throw new \RuntimeException('Failed to revoke token');
         }
     }
 
@@ -97,14 +108,22 @@ class Jwt
         $decoded = self::decode($token);
         if (!$decoded || !isset($decoded['jti'])) return false;
 
+        return self::isBlacklistedByJti($decoded['jti']);
+    }
+
+    public static function isBlacklistedByJti(string $jti): bool
+    {
         try {
             $stmt = Database::connect()->prepare(
                 "SELECT 1 FROM jwt_blacklist WHERE jti = ? LIMIT 1"
             );
-            $stmt->execute([$decoded['jti']]);
+            $stmt->execute([$jti]);
             return (bool) $stmt->fetchColumn();
         } catch (\Throwable $e) {
-            return false;
+            AppLogger::logger()->error('JWT blacklist check failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return true;
         }
     }
 }
