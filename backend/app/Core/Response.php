@@ -9,10 +9,18 @@ class Response
 
     public static function json(mixed $data, int $status = 200, array $headers = []): void
     {
-        $body = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        try {
+            $body = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            $body = json_encode([
+                'success' => false,
+                'message' => 'JSON encoding failed'
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+            $status = 500;
+        }
 
         if (self::$testMode) {
-            throw new ResponseCaptured($status, $body ?: '', $headers);
+            throw new ResponseCaptured($status, $body, $headers);
         }
 
         http_response_code($status);
@@ -41,11 +49,14 @@ class Response
         mixed $errors = null,
         array $headers = []
     ): void {
-        self::json([
+        $payload = [
             'success' => false,
             'message' => $message,
-            'errors'  => $errors,
-        ], $status, $headers);
+        ];
+        if ($errors !== null) {
+            $payload['errors'] = $errors;
+        }
+        self::json($payload, $status, $headers);
     }
 
     public static function noContent(): void
