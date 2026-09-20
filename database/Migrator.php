@@ -29,7 +29,7 @@ class Migrator
 
     private function connectServer(): PDO
     {
-        $config = require dirname(__DIR__) . '/config/database.php';
+        $config = require dirname(__DIR__) . '/backend/config/database.php';
         $dsn = "mysql:host={$config['host']};port={$config['port']};charset={$config['charset']}";
 
         try {
@@ -47,7 +47,7 @@ class Migrator
 
     private function ensureDatabase(): void
     {
-        $config = require dirname(__DIR__) . '/config/database.php';
+        $config = require dirname(__DIR__) . '/backend/config/database.php';
         $name   = $_ENV['DB_DATABASE'] ?? $config['database'] ?? 'galonku_db';
     
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
@@ -224,7 +224,7 @@ class Migrator
     public function dropDatabase(): void
     {
         $name   = $_ENV['DB_DATABASE'];
-        $config = require dirname(__DIR__) . '/config/database.php';
+        $config = require dirname(__DIR__) . '/backend/config/database.php';
         $dsn    = "mysql:host={$config['host']};port={$config['port']}";
 
         $server = new PDO($dsn, $config['username'], $config['password'], [
