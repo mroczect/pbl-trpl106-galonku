@@ -6,11 +6,6 @@ use App\Models\{Product, StockMovement};
 
 class StockService
 {
-    /**
-     * Adjust stock atomically and log the movement.
-     * Positive $delta = stock in, negative = stock out.
-     * Returns ['before' => int, 'after' => int].
-     */
     public static function adjust(
         int $productId,
         int $delta,
@@ -23,7 +18,6 @@ class StockService
     ): array {
         $db = Database::connect();
 
-        // Lock row
         $stmt = $db->prepare("SELECT stock FROM products WHERE id = ? FOR UPDATE");
         $stmt->execute([$productId]);
         $before = $stmt->fetchColumn();
@@ -56,7 +50,6 @@ class StockService
         return ['before' => $before, 'after' => $after];
     }
 
-    /** Log movement WITHOUT touching stock (used when caller already updated). */
     public static function log(
         int $productId,
         int $qty,
@@ -83,7 +76,6 @@ class StockService
         ]);
     }
 
-    /** Manual stock adjustment from admin (koreksi). */
     public static function manualAdjust(
         int $productId,
         int $newStock,

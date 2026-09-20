@@ -106,7 +106,6 @@ class TransactionService
                     $it['subtotal'],
                 ]);
 
-                // lock current stock, then decrement + log
                 $lock = $db->prepare("SELECT stock FROM products WHERE id = ? FOR UPDATE");
                 $lock->execute([$it['product_id']]);
                 $before = (int) $lock->fetchColumn();
