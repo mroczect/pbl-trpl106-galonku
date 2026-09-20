@@ -42,14 +42,31 @@ class ScheduleController
             'user_id'      => 'required|integer',
             'scheduled_at' => 'required|date',
         ]);
-    
-        if (!\App\Models\Customer::find((int) $data['customer_id'])) {
-            throw new \App\Exceptions\NotFoundException('Customer not found');
+
+        if (!preg_match(
+            '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/',
+            (string) $data['scheduled_at']
+        )) {
+            Response::error('scheduled_at must be in Y-m-d H:i:s format', 422);
+            return;
         }
-        if (!\App\Models\User::find((int) $data['user_id'])) {
-            throw new \App\Exceptions\NotFoundException('User not found');
+
+        $customer = \App\Models\Customer::find((int) $data['customer_id']);
+        if (!$customer || (int) $customer['is_active'] !== 1) {
+            throw new NotFoundException('Customer not found or inactive');
         }
-    
+
+        $user = \App\Models\User::find((int) $data['user_id']);
+        if (!$user || (int) $user['is_active'] !== 1) {
+            throw new NotFoundException('User not found or inactive');
+        }
+
+        $when = strtotime($data['scheduled_at']);
+        if ($when === false || $when <= time()) {
+            Response::error('scheduled_at must be in the future', 422);
+            return;
+        }
+
         $id = Schedule::create([
             'customer_id'  => (int) $data['customer_id'],
             'user_id'      => (int) $data['user_id'],
@@ -57,9 +74,9 @@ class ScheduleController
             'status'       => 'pending',
             'notes'        => $req->body('notes'),
         ]);
-    
+
         AppLogger::action(Auth::id(), 'create', 'schedule', $id, null);
-    
+
         Response::success(['id' => $id], 'Schedule created', 201);
     }
 

@@ -28,13 +28,13 @@ class Validator
                     case 'min':
                         if (is_string($value) && mb_strlen($value) < (int)$param)
                             $errors[$field][] = "$field must be at least $param characters";
-                        if (is_numeric($value) && $value < (int)$param)
+                        if (is_numeric($value) && $value < (float)$param)
                             $errors[$field][] = "$field must be at least $param";
                         break;
                     case 'max':
                         if (is_string($value) && mb_strlen($value) > (int)$param)
                             $errors[$field][] = "$field must be at most $param characters";
-                        if (is_numeric($value) && $value > (int)$param)
+                        if (is_numeric($value) && $value > (float)$param)
                             $errors[$field][] = "$field must be at most $param";
                         break;
                     case 'numeric':

@@ -1,10 +1,12 @@
 <?php
-require_once __DIR__ . '/_Base.php';
+declare(strict_types=1);
+
+use Database\Migration\Migration;
 
 return new class extends Migration {
     public function up(PDO $pdo): void
     {
-        $this->table($pdo, 'transactions', fn() => "
+        $this->createTable($pdo, 'transactions', fn() => "
             CREATE TABLE `transactions` (
                 `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 `invoice_no`    VARCHAR(30) NOT NULL,
@@ -17,11 +19,12 @@ return new class extends Migration {
                 `notes`         TEXT DEFAULT NULL,
                 `created_at`    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at`    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY `uk_transactions_invoice` (`invoice_no`),
-                KEY `idx_transactions_customer` (`customer_id`),
-                KEY `idx_transactions_user` (`user_id`),
-                KEY `idx_transactions_status` (`status`),
-                KEY `idx_transactions_created` (`created_at`),
+                UNIQUE KEY `uk_transactions_invoice`   (`invoice_no`),
+                KEY `idx_transactions_customer`        (`customer_id`),
+                KEY `idx_transactions_user`            (`user_id`),
+                KEY `idx_transactions_status`          (`status`),
+                KEY `idx_transactions_type`            (`type`),
+                KEY `idx_transactions_created`         (`created_at`),
                 CONSTRAINT `fk_transactions_customer` FOREIGN KEY (`customer_id`)
                     REFERENCES `customers`(`id`) ON UPDATE CASCADE ON DELETE RESTRICT,
                 CONSTRAINT `fk_transactions_user` FOREIGN KEY (`user_id`)
@@ -32,6 +35,6 @@ return new class extends Migration {
 
     public function down(PDO $pdo): void
     {
-        $pdo->exec("DROP TABLE IF EXISTS `transactions`");
+        $this->dropTable($pdo, 'transactions');
     }
 };

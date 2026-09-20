@@ -74,7 +74,8 @@ class Auth
         $payload = Jwt::verifyAccess($token);
         if (!$payload || !isset($payload['sub'])) return null;
 
-        if (Jwt::isBlacklisted($token)) return null;
+        $jti = $payload['jti'] ?? null;
+        if ($jti && Jwt::isBlacklistedByJti($jti)) return null;
 
         $user = User::find((int) $payload['sub']);
 

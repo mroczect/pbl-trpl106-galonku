@@ -2,7 +2,7 @@
 namespace App\Services;
 
 use App\Core\Database;
-use App\Models\{Transaction, Log};
+use App\Models\{Transaction, Log, StockMovement};
 use App\Support\AppLogger;
 use App\Exceptions\NotFoundException;
 
@@ -23,6 +23,9 @@ class TransactionService
 
             $aggregated = [];
             foreach ($data['items'] as $item) {
+                if (!isset($item['product_id'], $item['qty'])) {
+                    throw new \InvalidArgumentException('Each item needs product_id and qty');
+                }
                 $pid = (int) $item['product_id'];
                 $qty = (int) $item['qty'];
 
@@ -33,7 +36,7 @@ class TransactionService
                 $aggregated[$pid] = ($aggregated[$pid] ?? 0) + $qty;
             }
 
-            $invoiceNo   = 'INV-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
+            $invoiceNo   = 'INV-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4)));
             $totalAmount = 0;
             $itemsData   = [];
 
@@ -63,14 +66,24 @@ class TransactionService
                 ];
             }
 
+            $paidAmount = (float) ($data['paid_amount'] ?? 0);
+            if ($paidAmount > $totalAmount) {
+                throw new \InvalidArgumentException('paid_amount cannot exceed total_amount');
+            }
+
+            $status = $data['status'] ?? null;
+            if (!$status) {
+                $status = $paidAmount <= 0 ? 'pending' : ($paidAmount >= $totalAmount ? 'paid' : 'partial');
+            }
+
             $trxId = Transaction::create([
                 'invoice_no'   => $invoiceNo,
                 'customer_id'  => (int) $data['customer_id'],
                 'user_id'      => $userId,
                 'type'         => $data['type'] ?? 'sale',
                 'total_amount' => $totalAmount,
-                'paid_amount'  => (float) ($data['paid_amount'] ?? 0),
-                'status'       => $data['status'] ?? 'pending',
+                'paid_amount'  => $paidAmount,
+                'status'       => $status,
                 'notes'        => $data['notes'] ?? null,
             ]);
 
@@ -81,7 +94,7 @@ class TransactionService
             );
 
             $updateStock = $db->prepare(
-                "UPDATE products SET stock = stock - ? WHERE id = ?"
+                "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?"
             );
 
             foreach ($itemsData as $it) {
@@ -93,7 +106,29 @@ class TransactionService
                     $it['subtotal'],
                 ]);
 
-                $updateStock->execute([$it['qty'], $it['product_id']]);
+                // lock current stock, then decrement + log
+                $lock = $db->prepare("SELECT stock FROM products WHERE id = ? FOR UPDATE");
+                $lock->execute([$it['product_id']]);
+                $before = (int) $lock->fetchColumn();
+                $after  = $before - $it['qty'];
+
+                if ($after < 0) {
+                    throw new \RuntimeException("Insufficient stock for product #{$it['product_id']}");
+                }
+
+                $updateStock->execute([$it['qty'], $it['product_id'], $it['qty']]);
+
+                StockMovement::create([
+                    'product_id'     => $it['product_id'],
+                    'user_id'        => $userId,
+                    'type'           => 'out',
+                    'qty'            => $it['qty'],
+                    'stock_before'   => $before,
+                    'stock_after'    => $after,
+                    'reason'         => 'Penjualan',
+                    'reference_type' => 'transaction',
+                    'reference_id'   => $trxId,
+                ]);
             }
 
             Log::create([

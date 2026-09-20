@@ -38,13 +38,27 @@ class AppLogger
         ?array $payload = null
     ): void {
         try {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $trustedProxies = array_filter(
+                array_map('trim', explode(',', $_ENV['TRUSTED_PROXIES'] ?? ''))
+            );
+            if ($ip && in_array($ip, $trustedProxies, true)) {
+                $xff = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? null;
+                if ($xff) {
+                    $first = trim(explode(',', $xff)[0]);
+                    if (filter_var($first, FILTER_VALIDATE_IP)) {
+                        $ip = $first;
+                    }
+                }
+            }
+
             Log::create([
                 'user_id'    => $userId,
                 'action'     => $action,
                 'entity'     => $entity,
                 'entity_id'  => $entityId,
                 'payload'    => $payload ? json_encode($payload, JSON_UNESCAPED_UNICODE) : null,
-                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+                'ip_address' => $ip,
             ]);
 
             self::logger()->info("[$action] " . ($entity ?? '-') . " #" . ($entityId ?? '-'), [

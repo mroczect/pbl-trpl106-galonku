@@ -1,10 +1,12 @@
 <?php
-require_once __DIR__ . '/_Base.php';
+declare(strict_types=1);
+
+use Database\Migration\Migration;
 
 return new class extends Migration {
     public function up(PDO $pdo): void
     {
-        $this->table($pdo, 'products', fn() => "
+        $this->createTable($pdo, 'products', fn() => "
             CREATE TABLE `products` (
                 `id`         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 `sku`        VARCHAR(50) NOT NULL,
@@ -15,10 +17,10 @@ return new class extends Migration {
                 `is_active`  TINYINT(1) NOT NULL DEFAULT 1,
                 `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY `uk_products_sku` (`sku`),
-                KEY `idx_products_category` (`category`),
-                KEY `idx_products_active` (`is_active`),
-                KEY `idx_products_stock` (`stock`),
+                UNIQUE KEY `uk_products_sku`       (`sku`),
+                KEY `idx_products_category`        (`category`),
+                KEY `idx_products_active`          (`is_active`),
+                KEY `idx_products_stock`           (`stock`),
                 CONSTRAINT `ck_products_stock` CHECK (`stock` >= 0)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
@@ -26,6 +28,6 @@ return new class extends Migration {
 
     public function down(PDO $pdo): void
     {
-        $pdo->exec("DROP TABLE IF EXISTS `products`");
+        $this->dropTable($pdo, 'products');
     }
 };

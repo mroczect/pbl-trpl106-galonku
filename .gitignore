@@ -14,7 +14,6 @@
 /tmp/tests/*
 !/tmp/tests/empty
 tmp/
-
 /logs/*
 !/logs/empty
 
@@ -29,3 +28,5 @@ tmp/
 .snapcat.md
 pull_request_body.md
 /backend/.phpunit.cach/*
+
+/target

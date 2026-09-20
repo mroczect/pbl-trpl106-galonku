@@ -1,5 +1,7 @@
 <?php
-require_once __DIR__ . '/Seeder.php';
+declare(strict_types=1);
+
+use Database\Seeder\Seeder;
 
 return new class extends Seeder {
     public function run(PDO $pdo): void
@@ -13,12 +15,12 @@ return new class extends Seeder {
         ];
 
         $stmt = $pdo->prepare(
-            "INSERT INTO products (sku, name, category, price, stock, is_active)
+            'INSERT INTO products (sku, name, category, price, stock, is_active)
              VALUES (?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
                 name = VALUES(name),
                 category = VALUES(category),
-                price = VALUES(price)"
+                price = VALUES(price)'
         );
 
         foreach ($products as $p) {
@@ -27,5 +29,10 @@ return new class extends Seeder {
                 $p['price'], $p['stock'], $p['is_active'],
             ]);
         }
+    }
+
+    public function priority(): int
+    {
+        return 30;
     }
 };

@@ -47,7 +47,7 @@ class ScheduleTest extends TestCase
         $create = $this->post('/api/v1/schedules', [
             'customer_id'  => $cid,
             'user_id'      => 1,
-            'scheduled_at' => date('Y-m-d H:i:s'),
+            'scheduled_at' => date('Y-m-d H:i:s', time() + 3600),
         ], $this->withAuth());
         $id = $create->json('data.id');
 
@@ -63,7 +63,7 @@ class ScheduleTest extends TestCase
         $create = $this->post('/api/v1/schedules', [
             'customer_id'  => $c->json('data.id'),
             'user_id'      => 1,
-            'scheduled_at' => date('Y-m-d H:i:s'),
+            'scheduled_at' => date('Y-m-d H:i:s', time() + 3600),
         ], $this->withAuth());
         $id = $create->json('data.id');
 

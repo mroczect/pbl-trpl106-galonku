@@ -9,8 +9,11 @@ class AuthService
 {
     public static function register(array $data): int
     {
-        $role = Role::findByName('pelanggan');
-        $roleId = $role['id'] ?? 3;
+        $role = Role::findByName('customer');
+        if (!$role) {
+            throw new \RuntimeException('Default role "customer" not found');
+        }
+        $roleId = $role['id'];
 
         $id = User::create([
             'role_id'       => $roleId,

@@ -6,8 +6,6 @@ use Tests\Support\TestCase;
 
 class AuthTest extends TestCase
 {
-    // ==================== REGISTER ====================
-
     public function test_register_creates_user(): void
     {
         $res = $this->post('/api/v1/auth/register', [
@@ -24,7 +22,7 @@ class AuthTest extends TestCase
         $user = User::findByEmail('budi@example.com');
         $this->assertSame('Budi Santoso', $user['name']);
         $this->assertTrue(password_verify('secret123', $user['password_hash']));
-        $this->assertSame('pelanggan', $user['role_name']);
+        $this->assertSame('customer', $user['role_name']);
     }
 
     public function test_register_rejects_duplicate_email(): void
@@ -46,7 +44,6 @@ class AuthTest extends TestCase
         $this->assertArrayHasKey('password', $res->json('errors'));
     }
 
-
     public function test_login_success_returns_tokens(): void
     {
         $res = $this->post('/api/v1/auth/login', [
@@ -55,7 +52,7 @@ class AuthTest extends TestCase
 
         $res->assertOk()->assertSuccess();
         $res->assertJsonPath('data.user.email', 'admin@galonku.com');
-        $res->assertJsonPath('data.user.role_name', 'admin');
+        $res->assertJsonPath('data.user.role_name', 'administrator');
         $this->assertNotEmpty($res->json('data.access_token'));
         $this->assertNotEmpty($res->json('data.refresh_token'));
         $this->assertSame('Bearer', $res->json('data.token_type'));
@@ -84,7 +81,6 @@ class AuthTest extends TestCase
         $this->assertNotNull($user['last_login_at']);
     }
 
-
     public function test_me_requires_authentication(): void
     {
         $this->get('/api/v1/auth/me')->assertUnauthorized();
@@ -105,7 +101,6 @@ class AuthTest extends TestCase
         $this->get('/api/v1/auth/me', [], ['Authorization' => 'Bearer invalid.token.here'])
             ->assertUnauthorized();
     }
-
 
     public function test_refresh_returns_new_tokens(): void
     {
@@ -137,7 +132,6 @@ class AuthTest extends TestCase
             ->assertUnauthorized();
     }
 
-
     public function test_logout_blacklists_token(): void
     {
         $this->loginAsAdmin();
@@ -152,10 +146,10 @@ class AuthTest extends TestCase
         $refresh = $this->post('/api/v1/auth/login', [
             'email' => 'admin@galonku.com', 'password' => 'admin123',
         ])->json('data.refresh_token');
-    
+
         $this->post('/api/v1/auth/logout', ['refresh_token' => $refresh], $this->withAuth())
             ->assertOk();
-    
+
         $this->post('/api/v1/auth/refresh', ['refresh_token' => $refresh])
             ->assertUnauthorized();
     }

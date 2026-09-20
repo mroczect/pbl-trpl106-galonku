@@ -15,10 +15,8 @@ class Database
 
             $dsn = sprintf(
                 "mysql:host=%s;port=%s;dbname=%s;charset=%s",
-                $config['host'],
-                $config['port'],
-                $config['database'],
-                $config['charset']
+                $config['host'], $config['port'],
+                $config['database'], $config['charset']
             );
 
             try {
@@ -38,17 +36,38 @@ class Database
     public static function transaction(callable $callback): mixed
     {
         $pdo = self::connect();
-        $pdo->beginTransaction();
 
+        if ($pdo->inTransaction()) {
+            $sp = 'sp_' . bin2hex(random_bytes(8));
+            $pdo->exec("SAVEPOINT `$sp`");
+
+            try {
+                $result = $callback($pdo);
+                $pdo->exec("RELEASE SAVEPOINT `$sp`");
+                return $result;
+            } catch (\Throwable $e) {
+                try {
+                    $pdo->exec("ROLLBACK TO SAVEPOINT `$sp`");
+                    $pdo->exec("RELEASE SAVEPOINT `$sp`");
+                } catch (\Throwable) {
+                }
+                throw $e;
+            }
+        }
+
+        $pdo->beginTransaction();
         try {
             $result = $callback($pdo);
             $pdo->commit();
             return $result;
         } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             throw $e;
         }
     }
+
     public static function reset(): void
     {
         self::$pdo = null;
