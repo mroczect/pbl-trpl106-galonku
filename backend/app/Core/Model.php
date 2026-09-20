@@ -11,6 +11,8 @@ abstract class Model
 
     public static function all(string $orderBy = 'id DESC'): array
     {
+        static::assertOrderBy($orderBy);
+
         $stmt = Database::connect()->query(
             "SELECT * FROM " . static::$table . " ORDER BY $orderBy"
         );
@@ -85,11 +87,17 @@ abstract class Model
         return $stmt->execute([$id]);
     }
 
-    public static function paginate(int $page = 1, int $perPage = 15, array $filters = [], string $orderBy = 'id DESC'): array
-    {
+    public static function paginate(
+        int $page = 1,
+        int $perPage = 15,
+        array $filters = [],
+        string $orderBy = 'id DESC'
+    ): array {
         $page    = max(1, $page);
         $perPage = min(100, max(1, $perPage));
         $offset  = ($page - 1) * $perPage;
+
+        static::assertOrderBy($orderBy);
 
         $where = [];
         $params = [];
@@ -132,6 +140,17 @@ abstract class Model
     {
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
             throw new \InvalidArgumentException('Invalid column name');
+        }
+    }
+
+    protected static function assertOrderBy(string $orderBy): void
+    {
+        if (!preg_match(
+            '/^[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?'
+            . '(\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?)*$/i',
+            $orderBy
+        )) {
+            throw new \InvalidArgumentException('Invalid orderBy clause');
         }
     }
 }
