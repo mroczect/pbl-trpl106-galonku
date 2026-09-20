@@ -2,13 +2,13 @@
 <?php
 declare(strict_types=1);
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../backend/vendor/autoload.php';
 
 use Dotenv\Dotenv;
 
 $appEnv  = getenv('APP_ENV') ?: 'local';
 $envFile = $appEnv === 'testing' ? '.env.testing' : '.env';
-$envPath = dirname(__DIR__);
+$envPath = dirname(__DIR__) . '/backend';
 
 if (!file_exists("$envPath/$envFile")) {
     fwrite(STDERR, "Missing $envFile in $envPath\n");
