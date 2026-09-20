@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Galonku Admin</title>
+    <style>
+      body {
+        font-family: monospace;
+        margin: 0;
+        padding: 0;
+      }
+      nav {
+        background: #222;
+        color: #fff;
+        padding: 8px;
+      }
+      nav a {
+        color: #fff;
+        margin-right: 12px;
+        text-decoration: none;
+      }
+      nav a.active {
+        text-decoration: underline;
+        font-weight: bold;
+      }
+      main {
+        padding: 16px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 8px;
+      }
+      th,
+      td {
+        border: 1px solid #999;
+        padding: 4px 8px;
+        text-align: left;
+        font-size: 13px;
+      }
+      th {
+        background: #eee;
+      }
+      form {
+        margin: 12px 0;
+      }
+      input,
+      select,
+      textarea {
+        padding: 4px;
+        margin-right: 6px;
+        font-family: monospace;
+      }
+      button {
+        padding: 4px 10px;
+        cursor: pointer;
+        font-family: monospace;
+      }
+      .error {
+        color: red;
+      }
+      .ok {
+        color: green;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 8px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <nav id="nav"></nav>
+    <main id="app">Loading...</main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

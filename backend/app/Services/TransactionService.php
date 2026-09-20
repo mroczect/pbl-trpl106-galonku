@@ -2,7 +2,7 @@
 namespace App\Services;
 
 use App\Core\Database;
-use App\Models\{Transaction, Log};
+use App\Models\{Transaction, Log, StockMovement};
 use App\Support\AppLogger;
 use App\Exceptions\NotFoundException;
 
@@ -106,7 +106,29 @@ class TransactionService
                     $it['subtotal'],
                 ]);
 
+                // lock current stock, then decrement + log
+                $lock = $db->prepare("SELECT stock FROM products WHERE id = ? FOR UPDATE");
+                $lock->execute([$it['product_id']]);
+                $before = (int) $lock->fetchColumn();
+                $after  = $before - $it['qty'];
+
+                if ($after < 0) {
+                    throw new \RuntimeException("Insufficient stock for product #{$it['product_id']}");
+                }
+
                 $updateStock->execute([$it['qty'], $it['product_id'], $it['qty']]);
+
+                StockMovement::create([
+                    'product_id'     => $it['product_id'],
+                    'user_id'        => $userId,
+                    'type'           => 'out',
+                    'qty'            => $it['qty'],
+                    'stock_before'   => $before,
+                    'stock_after'    => $after,
+                    'reason'         => 'Penjualan',
+                    'reference_type' => 'transaction',
+                    'reference_id'   => $trxId,
+                ]);
             }
 
             Log::create([

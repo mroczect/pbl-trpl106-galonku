@@ -1,8 +1,8 @@
 # Galonku Backend API
 
-Backend service for a water depot management system. Handles authentication, product inventory, customer records, transaction processing, delivery scheduling, and audit logging.
+A REST API for running a water depot (depot air minum). Handles authentication, product and stock tracking, customer records, sales transactions, delivery schedules, and audit logging.
 
-Built with **vanilla PHP 8.1+** and **PDO**. No framework. Three Composer dependencies only: `vlucas/phpdotenv`, `firebase/php-jwt`, `monolog/monolog`.
+Plain PHP 8.1 with PDO. No framework. Three Composer packages: `vlucas/phpdotenv`, `firebase/php-jwt`, `monolog/monolog`.
 
 ---
 
@@ -17,17 +17,7 @@ Built with **vanilla PHP 8.1+** and **PDO**. No framework. Three Composer depend
 - [Architecture](#architecture)
 - [Authentication](#authentication)
 - [API Reference](#api-reference)
-  - [Response Format](#response-format)
-  - [Error Codes](#error-codes)
-  - [Auth Endpoints](#auth-endpoints)
-  - [Product Endpoints](#product-endpoints)
-  - [Customer Endpoints](#customer-endpoints)
-  - [Transaction Endpoints](#transaction-endpoints)
-  - [Schedule Endpoints](#schedule-endpoints)
-  - [User Endpoints](#user-endpoints)
-  - [Role Endpoints](#role-endpoints)
-  - [Log Endpoints](#log-endpoints)
-  - [Health Check](#health-check)
+- [Stock Movements](#stock-movements)
 - [Rate Limiting](#rate-limiting)
 - [Database Schema](#database-schema)
 - [Default Accounts](#default-accounts)
@@ -49,7 +39,7 @@ Built with **vanilla PHP 8.1+** and **PDO**. No framework. Three Composer depend
 
 Required PHP extensions: `pdo`, `pdo_mysql`, `json`, `mbstring`, `openssl`.
 
-Verify with:
+Check them with:
 
 ```bash
 php -m | grep -E 'pdo|json|mbstring|openssl'
@@ -59,7 +49,7 @@ php -m | grep -E 'pdo|json|mbstring|openssl'
 
 ## Installation
 
-Clone the repository and install dependencies:
+Clone the repo and install Composer dependencies:
 
 ```bash
 git clone https://github.com/mroczect/pbl-trpl106-galonku
@@ -67,14 +57,14 @@ cd pbl-trpl106-galonku/backend/
 composer install
 ```
 
-Copy environment files:
+Copy the environment templates:
 
 ```bash
 cp .env.example .env
 cp .env.testing.example .env.testing
 ```
 
-Create database users (log in as MySQL admin first):
+Create the MySQL user (log in as admin first). The credentials below match the defaults in `.env.example`:
 
 ```sql
 CREATE USER 'galonku'@'127.0.0.1' IDENTIFIED BY 'your_password_here';
@@ -88,46 +78,46 @@ GRANT ALL PRIVILEGES ON galonku_test.* TO 'galonku'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-Generate a JWT secret:
+Generate a JWT secret. The application refuses to start if the secret is shorter than 32 bytes:
 
 ```bash
 php -r "echo bin2hex(random_bytes(32));"
 ```
 
-Paste the output into both `.env` and `.env.testing`. They may be identical or different; it does not matter for correctness, only for test isolation.
+Put the output in `JWT_SECRET` in both `.env` and `.env.testing`. They can be the same value; test isolation does not require different secrets, only different databases.
 
-Build the schema and seed initial data:
+Build the schema and load seed data:
 
 ```bash
 php database/db.php fresh --seed
 ```
 
-Start the development server:
+Start the dev server:
 
 ```bash
 composer serve
 ```
 
-The API is available at `http://localhost:8000`.
+The API is now at `http://localhost:8000`.
 
 ---
 
 ## Configuration
 
-All configuration is loaded from `.env`. The file is parsed manually by `public/index.php` and `database/db.php`.
+Everything is read from `.env`. There is no config cache. `public/index.php` and `database/db.php` both load the file with `Dotenv::createImmutable()` at boot.
 
 ### Application
 
-| Variable       | Default        | Description                                                       |
-| -------------- | -------------- | ----------------------------------------------------------------- |
-| `APP_NAME`     | `Galonku API`  | Application name, returned by the health check endpoint           |
-| `APP_ENV`      | `production`   | Environment: `local`, `testing`, `production`                     |
-| `APP_DEBUG`    | `false`        | When `true`, error responses include stack traces and DB messages |
-| `APP_TIMEZONE` | `Asia/Jakarta` | PHP timezone setting                                              |
+| Variable       | Default        | Notes                                                   |
+| -------------- | -------------- | ------------------------------------------------------- |
+| `APP_NAME`     | `Galonku API`  | Returned by the health check endpoint                   |
+| `APP_ENV`      | `production`   | `local`, `testing`, or `production`                     |
+| `APP_DEBUG`    | `false`        | When `true`, error responses include exception messages |
+| `APP_TIMEZONE` | `Asia/Jakarta` | Passed to `date_default_timezone_set()`                 |
 
 ### Database
 
-| Variable      | Default      | Description        |
+| Variable      | Default      | Notes              |
 | ------------- | ------------ | ------------------ |
 | `DB_HOST`     | `127.0.0.1`  | MySQL host         |
 | `DB_PORT`     | `3306`       | MySQL port         |
@@ -138,44 +128,49 @@ All configuration is loaded from `.env`. The file is parsed manually by `public/
 
 ### JWT
 
-| Variable             | Default   | Description                                        |
-| -------------------- | --------- | -------------------------------------------------- |
-| `JWT_SECRET`         | –         | HMAC secret. Minimum 32 bytes. Use a random value. |
-| `JWT_ACCESS_EXPIRE`  | `3600`    | Access token lifetime in seconds                   |
-| `JWT_REFRESH_EXPIRE` | `2592000` | Refresh token lifetime in seconds (30 days)        |
+| Variable             | Default   | Notes                                                   |
+| -------------------- | --------- | ------------------------------------------------------- |
+| `JWT_SECRET`         | –         | HMAC key. Minimum 32 bytes. Refuses to boot below this. |
+| `JWT_ACCESS_EXPIRE`  | `3600`    | Access token lifetime in seconds                        |
+| `JWT_REFRESH_EXPIRE` | `2592000` | Refresh token lifetime in seconds (30 days)             |
 
 ### CORS and Rate Limiting
 
-| Variable               | Default | Description                              |
-| ---------------------- | ------- | ---------------------------------------- |
-| `CORS_ALLOWED_ORIGINS` | `*`     | Allowed origins, comma-separated, or `*` |
-| `RATE_LIMIT_LOGIN`     | `5`     | Max login attempts per window per IP     |
-| `RATE_LIMIT_WINDOW`    | `60`    | Rate limit window in seconds             |
+| Variable               | Default | Notes                                                    |
+| ---------------------- | ------- | -------------------------------------------------------- |
+| `CORS_ALLOWED_ORIGINS` | `*`     | Comma-separated origins, or `*`                          |
+| `RATE_LIMIT_LOGIN`     | `5`     | Login attempts per window per IP                         |
+| `RATE_LIMIT_WINDOW`    | `60`    | Window length in seconds                                 |
+| `TRUSTED_PROXIES`      | –       | Comma-separated proxy IPs for `X-Forwarded-For` handling |
+
+### Seeding in Production
+
+The `UserSeeder` refuses to run when `APP_ENV=production` unless `SEED_ADMIN_PASSWORD` is set. `SEED_AGENT_PASSWORD` and `SEED_CUSTOMER_PASSWORD` are optional overrides for the other two demo accounts.
 
 ### Testing Environment
 
-`.env.testing` is loaded when `APP_ENV=testing`. Point it at a separate database (`galonku_test`) using the same credentials. Both `.env` and `.env.testing` must define `JWT_SECRET` and database credentials.
+`.env.testing` is loaded when the shell has `APP_ENV=testing`. Point it at a separate database (`galonku_test`) so the test suite never touches development data. Both files need `JWT_SECRET` and database credentials.
 
 ---
 
 ## Database CLI
 
-All schema and data operations go through `php database/db.php`. The script reads `APP_ENV` from the shell to determine which `.env` file to load.
+Every schema and seed operation goes through `php database/db.php`. The script reads `APP_ENV` from the shell to determine which env file to load — this is not read from `$_ENV`, so set it on the command line if you want tests.
 
 ```
 Usage: php database/db.php <command> [options]
 ```
 
-| Command          | Description                                            |
-| ---------------- | ------------------------------------------------------ |
-| `migrate`        | Run all pending migrations                             |
-| `rollback [n]`   | Roll back the last `n` batches. Defaults to `1`.       |
-| `fresh [--seed]` | Drop all tables, re-migrate, optionally seed           |
-| `reset [--seed]` | Roll back all, re-migrate, optionally seed             |
-| `seed [name]`    | Run all seeders, or a single seeder by class name      |
-| `status`         | Show migration and seeder status                       |
-| `drop --force`   | Drop the entire database. Requires the `--force` flag. |
-| `help`           | Print help text                                        |
+| Command          | What it does                                         |
+| ---------------- | ---------------------------------------------------- |
+| `migrate`        | Run all pending migrations                           |
+| `rollback [n]`   | Roll back the last `n` batches (default `1`)         |
+| `fresh [--seed]` | Drop every table, re-migrate, optionally seed        |
+| `reset [--seed]` | Roll back all batches, re-migrate, optionally seed   |
+| `seed [name]`    | Run all seeders, or a single one by class name       |
+| `status`         | Show which migrations and seeders exist and what ran |
+| `drop --force`   | Drop the entire database. Needs the `--force` flag.  |
+| `help`           | Print usage                                          |
 
 Examples:
 
@@ -187,7 +182,7 @@ php database/db.php status
 APP_ENV=testing php database/db.php fresh --seed
 ```
 
-Composer shortcuts for common commands:
+Composer shortcuts:
 
 ```bash
 composer db:migrate
@@ -201,7 +196,7 @@ composer db:test:fresh
 
 ### Migrations
 
-Migration files live in `database/migrations/`. Each file returns an anonymous class extending `Migration` and implementing two methods:
+Each file in `database/migrations/` returns an anonymous class:
 
 ```php
 return new class extends Migration {
@@ -210,27 +205,23 @@ return new class extends Migration {
 };
 ```
 
-Filename format: `<timestamp>_<description>.php`. Files whose names begin with an underscore are treated as base classes and skipped by the migrator.
+Filename format is `<YYYY_MM_DD_HHMMSS>_<description>.php`. Files starting with an underscore are treated as base classes and skipped. The base `Migration` class exposes `createTable()`, `dropTable()`, and `hasTable()` helpers; `createTable()` is idempotent (checks `information_schema.tables` before issuing `CREATE TABLE`).
 
-`up()` is **idempotent**: the base class checks `SHOW TABLES LIKE` before `CREATE TABLE`. Running `migrate` repeatedly will not fail because a table already exists.
-
-MySQL and MariaDB auto-commit DDL statements, so migrations do not run inside a transaction. If a migration fails midway, the migrator reports the error and halts; the operator must inspect state manually.
+Note: MySQL and MariaDB auto-commit DDL, so migrations do not run inside a transaction. If a migration fails halfway, the migrator halts and prints the error — you inspect the state manually.
 
 ### Seeders
 
-Seeders live in `database/seeders/`. Each file returns an anonymous class extending `Seeder` with a `run(PDO $pdo)` method.
+Each file in `database/seeders/` returns an anonymous class extending `Seeder` with a `run(PDO $pdo)` method and a `priority(): int` method. Lower priority runs first. Current order:
 
-The migrator runs seeders in a fixed order, **not alphabetical**:
+| Priority | Seeder           |
+| -------- | ---------------- |
+| 10       | `RoleSeeder`     |
+| 20       | `UserSeeder`     |
+| 30       | `ProductSeeder`  |
+| 40       | `CustomerSeeder` |
+| 50       | `DemoSeeder`     |
 
-1. `RoleSeeder`
-2. `UserSeeder`
-3. `ProductSeeder`
-4. `CustomerSeeder`
-5. `DemoSeeder`
-
-This order respects foreign key dependencies. Seeders use `ON DUPLICATE KEY UPDATE` so they are safe to run multiple times.
-
-To add a new seeder: create the file in `database/seeders/` and append its class name to the `SEEDER_ORDER` constant in `database/Migrator.php`.
+The order respects foreign keys. Seeders use `ON DUPLICATE KEY UPDATE`, so running them repeatedly is safe. To add a new seeder, drop the file in `database/seeders/` and give it a priority number — no registry to update.
 
 ---
 
@@ -242,9 +233,9 @@ Development:
 composer serve
 ```
 
-This invokes `php -S localhost:8000 -t public`. The router directs every request to `public/index.php`.
+This runs `php -S localhost:8000 -t public`. Every request lands on `public/index.php`.
 
-For production, point your web server (Nginx, Apache, Caddy) at the `public/` directory. All requests must be routed to `public/index.php` except static files.
+For production, point Nginx/Apache/Caddy at the `public/` directory. Only `public/index.php` should be reachable; everything else is loaded via the autoloader.
 
 Nginx example:
 
@@ -269,8 +260,6 @@ server {
 }
 ```
 
-The `public/` directory contains only `index.php`. No other file is exposed.
-
 ---
 
 ## Project Structure
@@ -278,11 +267,11 @@ The `public/` directory contains only `index.php`. No other file is exposed.
 ```
 backend/
 ├── app/
-│   ├── Controllers/Api/V1/       HTTP controllers, one per resource
+│   ├── Controllers/Api/V1/       One controller per resource
 │   ├── Core/                     Framework primitives
 │   │   ├── App.php               Bootstrap: error handler, CORS, router
-│   │   ├── Auth.php              Authentication state and helpers
-│   │   ├── Database.php          PDO connection singleton
+│   │   ├── Auth.php              Auth state, hashing, login helpers
+│   │   ├── Database.php          PDO singleton, transaction wrapper
 │   │   ├── Model.php             Base model with query helpers
 │   │   ├── Request.php           Request wrapper
 │   │   ├── Response.php          JSON response helper
@@ -290,25 +279,19 @@ backend/
 │   │   └── Validator.php         Input validation
 │   ├── Exceptions/               ValidationException, AuthException, NotFoundException, ErrorHandler
 │   ├── Middleware/               AuthMiddleware, RoleMiddleware, RateLimitMiddleware
-│   ├── Models/                   User, Product, Customer, Transaction, Schedule, Role, Log
+│   ├── Models/                   User, Product, Customer, Transaction, Schedule, Role, Log, StockMovement
 │   ├── Services/                 AuthService, TransactionService, StockService
 │   ├── Support/                  Jwt, AppLogger, helpers.php
-│   └── Testing/                  Exception ResponseCaptured for tests
+│   └── Testing/                  ResponseCaptured for tests
 ├── config/
-│   ├── app.php
 │   ├── cors.php
 │   └── database.php
-├── database/
-│   ├── Migrator.php              Migration and seeder engine
-│   ├── db.php                    CLI entry point
-│   ├── migrations/               One file per table
-│   └── seeders/                  One file per seed concern
 ├── public/
 │   └── index.php                 Single entry point
 ├── routes/
 │   └── api.php                   Route definitions
 ├── storage/
-│   ├── cache/                    Rate limit JSON files
+│   ├── cache/                    Rate-limit JSON files
 │   ├── logs/                     Monolog output (app.log)
 │   └── uploads/                  Reserved for file uploads
 ├── tests/
@@ -324,30 +307,32 @@ backend/
 └── README.md
 ```
 
+The migration and seeder engine lives in a sibling directory (`../database/`) alongside the backend.
+
 ---
 
 ## Architecture
 
 ### Request Lifecycle
 
-1. The web server forwards the request to `public/index.php`.
-2. Dotenv loads environment variables from `.env` (or `.env.testing` if applicable).
-3. `App::boot()` registers the error handler, CORS headers, and security headers. It then creates the router and loads route definitions from `routes/api.php`.
-4. `App::run()` captures the current request via `Request::capture()` and dispatches it through `Router::dispatch()`.
-5. The router matches the path and method against registered routes. On a match, it runs middleware in sequence, then invokes the controller action.
-6. The controller calls services and models, then emits a response via `Response::success()` or `Response::error()`. Both call `exit` after emitting JSON.
-7. Uncaught exceptions reach `ErrorHandler::handle()`, which maps known exception types to HTTP status codes and logs unknown ones to `storage/logs/app.log`.
+1. The web server forwards every request to `public/index.php`.
+2. Dotenv loads `.env` (or `.env.testing` when `APP_ENV=testing`).
+3. `App::boot()` registers the exception handler, security headers, and CORS headers. It builds a router and loads `routes/api.php`.
+4. `App::run()` captures the incoming request with `Request::capture()` and hands it to `Router::dispatch()`.
+5. The router matches path and method. On a match it runs middleware in order, then calls the controller action.
+6. The controller talks to services and models, then emits a response through `Response::success()` or `Response::error()`. Both call `exit` after sending JSON.
+7. Any uncaught exception reaches `ErrorHandler::handle()`, which maps exception types to HTTP codes and logs everything else to `storage/logs/app.log` through Monolog.
 
 ### Routing
 
-Routes are registered with `$router->get()`, `->post()`, `->put()`, `->patch()`, and `->delete()`. Path parameters use the `{name}` syntax and are passed to the controller as positional arguments after the `Request` object.
+Register routes with `$router->get()`, `->post()`, `->put()`, `->patch()`, `->delete()`. Path parameters use `{name}` and are passed to the controller after the `Request` argument:
 
 ```php
 $router->get('/products/{id}', [ProductController::class, 'show']);
-// ProductController::show(Request $req, int $id)
+// Controller signature: show(Request $req, int $id)
 ```
 
-Route groups apply a shared prefix and middleware list:
+Groups apply a shared prefix and middleware list:
 
 ```php
 $router->group(['prefix' => '/api/v1', 'middleware' => [AuthMiddleware::class]], function ($router) {
@@ -355,16 +340,16 @@ $router->group(['prefix' => '/api/v1', 'middleware' => [AuthMiddleware::class]],
 });
 ```
 
-Middleware is referenced by class name, optionally with arguments after a colon:
+Middleware is referenced by class name, with optional arguments after a colon:
 
 ```php
-[RoleMiddleware::class . ':admin']
+[RoleMiddleware::class . ':administrator']
 [RateLimitMiddleware::class . ':login:5:60']
 ```
 
 ### Response Contract
 
-Every response is JSON with the following shape.
+Every response is JSON.
 
 Success:
 
@@ -387,25 +372,29 @@ Error:
 }
 ```
 
-The `meta` field appears only on paginated endpoints. The `errors` field appears only on validation failures and typically maps field names to arrays of messages.
+`meta` only appears on paginated endpoints. `errors` only appears on validation failures and typically maps field names to arrays of messages.
 
 ### Error Handling
 
-`ErrorHandler::handle()` maps exceptions to HTTP status codes:
+`ErrorHandler::handle()` maps exceptions:
 
-| Exception                  | Status |
-| -------------------------- | ------ |
-| `ValidationException`      | 422    |
-| `AuthException`            | 401    |
-| `NotFoundException`        | 404    |
-| `InvalidArgumentException` | 400    |
-| Any other exception        | 500    |
+| Exception                                        | HTTP status |
+| ------------------------------------------------ | ----------- |
+| `ValidationException`                            | 422         |
+| `AuthException`                                  | 401         |
+| `NotFoundException`                              | 404         |
+| `InvalidArgumentException`                       | 400         |
+| `PDOException` (SQLSTATE 23000, dup entry)       | 409         |
+| `PDOException` (SQLSTATE 23000, FK violation)    | 422         |
+| `PDOException` (SQLSTATE 23000, CHECK violation) | 422         |
+| `PDOException` (other)                           | 500         |
+| Any other exception                              | 500         |
 
-Unhandled exceptions are logged to `storage/logs/app.log` via Monolog with file, line, and stack trace. When `APP_DEBUG=true`, the exception message is included in the response. In production, the response is a generic `Internal server error`.
+Unhandled exceptions go to `storage/logs/app.log` with file, line, and stack trace. When `APP_DEBUG=true`, level-500 responses include the exception message. In production they return a generic `Internal server error`.
 
 ### Validation
 
-Validation rules are declared per endpoint as a `field => rules` map. Rule strings use `|` as a separator and `:` for parameters:
+Rules are declared per endpoint as a `field => rules` map. Rule strings separate options with `|` and arguments with `:`:
 
 ```php
 $data = $req->validate([
@@ -418,22 +407,22 @@ $data = $req->validate([
 
 Supported rules: `required`, `email`, `min`, `max`, `numeric`, `integer`, `in`, `array`, `date`, `boolean`, `phone`.
 
-`Validator::make()` returns only the fields that pass validation. Fields that are absent or null and not `required` are omitted from the result. If any rule fails, a `ValidationException` is thrown carrying all per-field errors.
+`Validator::make()` returns only the fields that pass and are present. Absent or null fields that aren't `required` are dropped from the result. Any failure throws `ValidationException` carrying per-field errors.
 
 ---
 
 ## Authentication
 
-The API uses JWT tokens with HS256 signatures.
+JWT, HS256 signatures.
 
 ### Token Types
 
 Two tokens are issued at login:
 
-- **Access token** – Short-lived (default 1 hour). Sent in the `Authorization` header on every protected request. Contains `sub` (user ID), `email`, `role`, `typ=access`, `jti`, `iat`, `exp`.
-- **Refresh token** – Long-lived (default 30 days). Used only at `POST /api/v1/auth/refresh`. Contains `sub`, `typ=refresh`, `jti`, `iat`, `exp`. No role or email.
+- **Access token** — short-lived (default 1 hour). Sent in the `Authorization` header on protected requests. Claims: `sub` (user ID), `email`, `role`, `typ=access`, `jti`, `iat`, `exp`.
+- **Refresh token** — long-lived (default 30 days). Only used at `POST /api/v1/auth/refresh`. Claims: `sub`, `typ=refresh`, `jti`, `iat`, `exp`. No role or email.
 
-Both tokens carry a `jti` claim (32-character hex string). The `jti` is the identifier used for blacklisting.
+Both carry a `jti` claim — a 32-character hex string. `jti` is what gets blacklisted.
 
 ### Protected Requests
 
@@ -441,7 +430,7 @@ Both tokens carry a `jti` claim (32-character hex string). The `jti` is the iden
 Authorization: Bearer <access_token>
 ```
 
-`AuthMiddleware` reads the token, verifies the signature, ensures `typ=access`, checks the `jti` against the blacklist, and loads the user from the database. If any step fails, the response is `401 Unauthorized`.
+`AuthMiddleware` reads the token, verifies the signature, ensures `typ=access`, checks the `jti` against the blacklist, and loads the user from the database. Any failure returns 401.
 
 ### Refresh Flow
 
@@ -450,7 +439,7 @@ POST /api/v1/auth/refresh
 { "refresh_token": "<token>" }
 ```
 
-The endpoint verifies the refresh token, confirms the user exists and is active, then issues a new token pair. The old refresh token is not invalidated. The client rotates tokens by overwriting its stored pair.
+The endpoint verifies the refresh token, confirms the user still exists and is active, then issues a new token pair. The old refresh token is blacklisted at the same time, so it cannot be reused.
 
 ### Logout
 
@@ -459,15 +448,23 @@ POST /api/v1/auth/logout
 Authorization: Bearer <access_token>
 ```
 
-The endpoint inserts the current access token's `jti` into `jwt_blacklist` along with its expiry. Subsequent requests using that token return 401. Refresh tokens are unaffected. Blacklist cleanup is performed in `DemoSeeder` and can be scheduled as a cron job:
+Inserts the current access token's `jti` into `jwt_blacklist` with its expiry. If the body carries `refresh_token`, that `jti` is blacklisted too.
+
+Blacklist rows expire naturally — set up a cron to clean up:
 
 ```sql
 DELETE FROM jwt_blacklist WHERE expires_at < NOW();
 ```
 
+`database/cleanup.php` does this along with pruning old rate-limit cache files:
+
+```bash
+php database/cleanup.php
+```
+
 ### Password Hashing
 
-Passwords are hashed with Argon2id when available, falling back to Bcrypt. `Auth::hash()` selects the algorithm at runtime. Hashes are never returned in API responses; controllers strip `password_hash` before serializing user records.
+`Auth::hash()` uses Argon2id when available, falling back to Bcrypt. Hashes are never returned in responses — controllers strip `password_hash` before serializing user records.
 
 ---
 
@@ -477,7 +474,7 @@ Base URL: `/api/v1`. All requests and responses use `Content-Type: application/j
 
 ### Response Format
 
-Paginated list endpoints accept `page` and `per_page` query parameters. `per_page` is capped at 100. The response includes:
+Paginated endpoints accept `page` and `per_page`. `per_page` is capped at 100. The response includes:
 
 ```json
 {
@@ -495,19 +492,19 @@ Paginated list endpoints accept `page` and `per_page` query parameters. `per_pag
 
 ### Error Codes
 
-| Status | Meaning                                           |
-| ------ | ------------------------------------------------- |
-| 200    | Success                                           |
-| 201    | Resource created                                  |
-| 400    | Bad request, invalid argument                     |
-| 401    | Missing or invalid credentials                    |
-| 403    | Authenticated but not authorized                  |
-| 404    | Resource not found                                |
-| 405    | Method not allowed for this path                  |
-| 409    | Conflict, typically a unique constraint violation |
-| 422    | Validation failed                                 |
-| 429    | Rate limit exceeded                               |
-| 500    | Unhandled server error                            |
+| Status | Meaning                                |
+| ------ | -------------------------------------- |
+| 200    | Success                                |
+| 201    | Resource created                       |
+| 400    | Bad request, invalid argument          |
+| 401    | Missing or invalid credentials         |
+| 403    | Authenticated but not authorized       |
+| 404    | Resource not found                     |
+| 405    | Method not allowed for this path       |
+| 409    | Conflict (usually a unique constraint) |
+| 422    | Validation failed                      |
+| 429    | Rate limit exceeded                    |
+| 500    | Unhandled server error                 |
 
 ---
 
@@ -519,9 +516,9 @@ Paginated list endpoints accept `page` and `per_page` query parameters. `per_pag
 POST /api/v1/auth/register
 ```
 
-Public. Creates a user with the `pelanggan` role.
+Public. Creates a user with the `customer` role. Rate-limited at 5 requests per hour per IP.
 
-Request body:
+Body:
 
 | Field      | Type   | Required | Rules                              |
 | ---------- | ------ | -------- | ---------------------------------- |
@@ -546,11 +543,7 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 Response `201`:
 
 ```json
-{
-  "success": true,
-  "message": "Registration successful",
-  "data": { "id": 4 }
-}
+{ "success": true, "message": "Registration successful", "data": { "id": 4 } }
 ```
 
 Returns `409` if the email already exists. Returns `422` on validation failure.
@@ -563,14 +556,9 @@ Returns `409` if the email already exists. Returns `422` on validation failure.
 POST /api/v1/auth/login
 ```
 
-Public. Rate-limited at 5 requests per 60 seconds per IP. A successful login updates `users.last_login_at` and writes an entry to `logs`.
+Public. Rate-limited at 5 requests per 60 seconds per IP. Success updates `users.last_login_at` and writes to `logs`.
 
-Request body:
-
-| Field      | Type   | Required |
-| ---------- | ------ | -------- |
-| `email`    | string | yes      |
-| `password` | string | yes      |
+Body: `email`, `password`.
 
 Example:
 
@@ -589,11 +577,11 @@ Response `200`:
   "data": {
     "user": {
       "id": 1,
-      "name": "Admin Galonku",
+      "name": "Administrator",
       "email": "admin@galonku.com",
       "phone": "081234567890",
       "role_id": 1,
-      "role_name": "admin"
+      "role_name": "administrator"
     },
     "access_token": "eyJ...",
     "refresh_token": "eyJ...",
@@ -603,7 +591,7 @@ Response `200`:
 }
 ```
 
-Returns `401` if credentials are wrong or the account is inactive. Returns `429` if the rate limit is exceeded.
+Returns `401` on wrong credentials or an inactive account. Returns `429` if the rate limit is exceeded.
 
 ---
 
@@ -613,13 +601,9 @@ Returns `401` if credentials are wrong or the account is inactive. Returns `429`
 POST /api/v1/auth/refresh
 ```
 
-Public. Exchanges a valid refresh token for a new token pair.
+Public. Rate-limited at 20 requests per minute per IP. Exchanges a valid refresh token for a new pair. The old refresh token is blacklisted.
 
-Request body:
-
-| Field           | Type   | Required |
-| --------------- | ------ | -------- |
-| `refresh_token` | string | yes      |
+Body: `refresh_token`.
 
 Response `200`:
 
@@ -636,7 +620,7 @@ Response `200`:
 }
 ```
 
-Returns `401` if the token is malformed, expired, or the wrong type. Access tokens are rejected at this endpoint.
+Returns `401` if the token is malformed, expired, blacklisted, or the wrong type. Access tokens are rejected here.
 
 ---
 
@@ -647,7 +631,7 @@ GET /api/v1/auth/me
 Authorization: Bearer <token>
 ```
 
-Returns the authenticated user's record. `password_hash` is stripped.
+Returns the authenticated user's record with `password_hash` removed.
 
 Response `200`:
 
@@ -658,14 +642,14 @@ Response `200`:
   "data": {
     "id": 1,
     "role_id": 1,
-    "name": "Admin Galonku",
+    "name": "Administrator",
     "email": "admin@galonku.com",
     "phone": "081234567890",
     "is_active": 1,
     "last_login_at": "2026-09-17 04:21:33",
     "created_at": "2026-09-17 04:00:00",
     "updated_at": "2026-09-17 04:21:33",
-    "role_name": "admin"
+    "role_name": "administrator"
   }
 }
 ```
@@ -681,23 +665,19 @@ POST /api/v1/auth/logout
 Authorization: Bearer <token>
 ```
 
-Blacklists the current access token. Writes a `logout` action to `logs`.
+Blacklists the current access token (and the refresh token in the body if present). Writes a `logout` action to `logs`.
 
 Response `200`:
 
 ```json
-{
-  "success": true,
-  "message": "Logged out successfully",
-  "data": null
-}
+{ "success": true, "message": "Logged out successfully", "data": null }
 ```
 
 ---
 
 ### Product Endpoints
 
-Products have an SKU, name, category, price, stock, and active flag. Categories: `galon`, `air`, `aksesoris`, `lain`.
+Products have a SKU, name, category, price, stock, and active flag. Categories: `galon`, `air`, `aksesoris`, `lain`.
 
 #### List Products
 
@@ -706,7 +686,7 @@ GET /api/v1/products?page=1&per_page=15&category=galon
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. Returns a paginated list. `category` is optional; when provided, only products in that category are returned.
+Any authenticated user. `category` is optional.
 
 Response `200`:
 
@@ -727,12 +707,7 @@ Response `200`:
       "updated_at": "2026-09-17 04:00:00"
     }
   ],
-  "meta": {
-    "page": 1,
-    "per_page": 15,
-    "total": 5,
-    "total_pages": 1
-  }
+  "meta": { "page": 1, "per_page": 15, "total": 5, "total_pages": 1 }
 }
 ```
 
@@ -745,7 +720,7 @@ GET /api/v1/products/{id}
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. Returns `404` if the product does not exist.
+Any authenticated user. Returns `404` if not found.
 
 ---
 
@@ -756,17 +731,7 @@ GET /api/v1/products/low-stock?threshold=10
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. Returns active products with `stock <= threshold`. The default threshold is 10.
-
-Response `200`:
-
-```json
-{
-  "success": true,
-  "message": "OK",
-  "data": []
-}
-```
+Any authenticated user. Returns active products with `stock <= threshold`. Default threshold is 10.
 
 ---
 
@@ -775,10 +740,10 @@ Response `200`:
 ```
 POST /api/v1/products
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
-Request body:
+Body:
 
 | Field      | Type    | Required | Rules                                      |
 | ---------- | ------- | -------- | ------------------------------------------ |
@@ -803,17 +768,11 @@ curl -X POST http://localhost:8000/api/v1/products \
   }'
 ```
 
-Response `201`:
+Response `201`: `{ "success": true, "message": "Product created", "data": { "id": 6 } }`
 
-```json
-{
-  "success": true,
-  "message": "Product created",
-  "data": { "id": 6 }
-}
-```
+Returns `409` on duplicate SKU, `422` on validation failure, `403` for non-admins.
 
-Returns `409` if the SKU already exists, `422` on validation failure, `403` for non-admins.
+Note: creating a product with an initial `stock` value does **not** write a `stock_movements` row. If you want a paper trail, create the product with `stock: 0` and then use the stock adjustment endpoint.
 
 ---
 
@@ -822,22 +781,16 @@ Returns `409` if the SKU already exists, `422` on validation failure, `403` for 
 ```
 PUT /api/v1/products/{id}
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
-All fields optional. Only the fields sent are updated. Accepts `name`, `category`, `price`, `stock`, `is_active`.
+All fields optional. Accepts `name`, `category`, `price`, `stock`, `is_active`. Only the fields you send are updated.
 
-Response `200`:
+Returning `400` with `No data to update` means you sent an empty body.
 
-```json
-{
-  "success": true,
-  "message": "Product updated",
-  "data": null
-}
-```
+Warning: sending `stock` here overwrites the current value **without** recording a stock movement. Use `POST /api/v1/stock-movements/adjust` when you want an audit trail.
 
-Returns `404` if the product does not exist. Returns `400` if no fields are provided.
+Returns `404` if the product does not exist.
 
 ---
 
@@ -846,20 +799,125 @@ Returns `404` if the product does not exist. Returns `400` if no fields are prov
 ```
 DELETE /api/v1/products/{id}
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
-Soft delete: sets `is_active = 0`. The row remains in the database. Transactions and transaction items referencing this product still resolve.
+Soft delete: sets `is_active = 0`. The row stays in the database so transaction items referencing it still resolve.
+
+Response `200`: `{ "success": true, "message": "Product deactivated", "data": null }`
+
+---
+
+### Stock Movements
+
+Every change to `products.stock` that goes through `StockService` writes a row to `stock_movements`. The table records who changed what, before/after values, and why.
+
+Movement types:
+
+- `in` — stock added (manual restock, purchase delivery)
+- `out` — stock removed (sale, delivery, damage)
+- `adjustment` — correction to a specific target value
+
+`reference_type` and `reference_id` link a movement to a source record (e.g. `transaction` + ID 42). For manual entries they are null.
+
+#### List Stock Movements
+
+```
+GET /api/v1/stock-movements?page=1&per_page=30&product_id=1&type=out&from=2026-09-01&to=2026-09-30
+Authorization: Bearer <token>
+```
+
+Any authenticated user. All filters optional.
+
+| Query param  | Notes                                                     |
+| ------------ | --------------------------------------------------------- |
+| `product_id` | Filter by product                                         |
+| `type`       | `in`, `out`, or `adjustment`                              |
+| `user_id`    | Filter by who performed the movement                      |
+| `from`       | Inclusive start date (`YYYY-MM-DD`), matches `created_at` |
+| `to`         | Inclusive end date (`YYYY-MM-DD`)                         |
 
 Response `200`:
 
 ```json
 {
   "success": true,
-  "message": "Product deactivated",
-  "data": null
+  "message": "OK",
+  "data": [
+    {
+      "id": 7,
+      "product_id": 1,
+      "user_id": 1,
+      "type": "out",
+      "qty": 2,
+      "stock_before": 50,
+      "stock_after": 48,
+      "reason": "Penjualan",
+      "reference_type": "transaction",
+      "reference_id": 4,
+      "notes": null,
+      "created_at": "2026-09-17 04:30:00",
+      "product_name": "Galon Aqua 19L",
+      "sku": "GLN-AQUA-19L",
+      "user_name": "Administrator"
+    }
+  ],
+  "meta": { "page": 1, "per_page": 30, "total": 1, "total_pages": 1 }
 }
 ```
+
+---
+
+#### Adjust Stock
+
+```
+POST /api/v1/stock-movements/adjust
+Authorization: Bearer <token>
+Role: administrator
+```
+
+Sets a product's stock to an exact target value and records the difference as an `adjustment` movement. Use this for stock opname corrections, damaged goods write-offs, or fixing a miscount.
+
+Body:
+
+| Field        | Type    | Required | Rules                    |
+| ------------ | ------- | -------- | ------------------------ |
+| `product_id` | integer | yes      | Must reference a product |
+| `new_stock`  | integer | yes      | Minimum 0                |
+| `reason`     | string  | yes      | 3–100 characters         |
+| `notes`      | string  | no       | Up to 500 characters     |
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock-movements/adjust \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 1,
+    "new_stock": 45,
+    "reason": "Stock opname September",
+    "notes": "3 galon bocor, 2 tidak ditemukan"
+  }'
+```
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "Stock adjusted",
+  "data": {
+    "before": 48,
+    "after": 45,
+    "changed": true
+  }
+}
+```
+
+If `new_stock` equals the current stock, `changed` is `false` and no movement row is written.
+
+The whole operation runs inside a database transaction with a `SELECT ... FOR UPDATE` lock on the product row.
 
 ---
 
@@ -872,7 +930,7 @@ GET /api/v1/customers?page=1&per_page=15
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. Returns a paginated list ordered by ID descending.
+Any authenticated user. Ordered by ID descending.
 
 ---
 
@@ -883,7 +941,7 @@ GET /api/v1/customers/{id}
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. Returns `404` if not found.
+Returns `404` if not found.
 
 ---
 
@@ -896,7 +954,7 @@ Authorization: Bearer <token>
 
 Any authenticated user.
 
-Request body:
+Body:
 
 | Field     | Type   | Required | Rules                                    |
 | --------- | ------ | -------- | ---------------------------------------- |
@@ -905,17 +963,9 @@ Request body:
 | `address` | string | no       | Free text                                |
 | `notes`   | string | no       | Free text                                |
 
-Response `201`:
+Response `201`: `{ "success": true, "message": "Customer created", "data": { "id": 4 } }`
 
-```json
-{
-  "success": true,
-  "message": "Customer created",
-  "data": { "id": 4 }
-}
-```
-
-Returns `409` if the phone number already exists.
+Returns `409` on duplicate phone.
 
 ---
 
@@ -928,8 +978,6 @@ Authorization: Bearer <token>
 
 Accepts `name`, `phone`, `address`, `notes`, `is_active`.
 
-Response `200` with `{ "success": true, "message": "Customer updated", "data": null }`.
-
 ---
 
 #### Delete Customer
@@ -937,16 +985,18 @@ Response `200` with `{ "success": true, "message": "Customer updated", "data": n
 ```
 DELETE /api/v1/customers/{id}
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
-Soft delete: sets `is_active = 0`. Admins only.
+Soft delete: sets `is_active = 0`.
 
 ---
 
 ### Transaction Endpoints
 
-Transactions have a header (`transactions`) and one or more items (`transaction_items`). Creating a transaction deducts product stock atomically within a database transaction. If any item fails (insufficient stock, unknown product), the entire transaction is rolled back.
+A transaction has a header (`transactions`) and one or more items (`transaction_items`). Creating one deducts product stock atomically inside a database transaction. If any item fails (insufficient stock, unknown product, bad quantity), the whole thing rolls back — no header, no items, no stock change, no movement rows.
+
+Every successful item write also inserts a `stock_movements` row with `type = 'out'` and `reference_type = 'transaction'`.
 
 #### List Transactions
 
@@ -955,39 +1005,7 @@ GET /api/v1/transactions?page=1&per_page=15&status=paid&customer_id=1&user_id=1&
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. All filters optional. Returns headers with joined customer and user names.
-
-Response `200`:
-
-```json
-{
-  "success": true,
-  "message": "OK",
-  "data": [
-    {
-      "id": 1,
-      "invoice_no": "INV-20260917-8C4A",
-      "customer_id": 1,
-      "user_id": 1,
-      "type": "sale",
-      "total_amount": "26000.00",
-      "paid_amount": "26000.00",
-      "status": "paid",
-      "notes": null,
-      "created_at": "2026-09-17 04:30:00",
-      "updated_at": "2026-09-17 04:30:00",
-      "customer_name": "Ibu Siti",
-      "user_name": "Admin Galonku"
-    }
-  ],
-  "meta": {
-    "page": 1,
-    "per_page": 15,
-    "total": 1,
-    "total_pages": 1
-  }
-}
-```
+Any authenticated user. Filters are optional. Returns headers with joined customer and user names.
 
 ---
 
@@ -1020,7 +1038,7 @@ Response `200`:
     "updated_at": "2026-09-17 04:30:00",
     "customer_name": "Ibu Siti",
     "customer_phone": "081111222333",
-    "user_name": "Admin Galonku",
+    "user_name": "Administrator",
     "items": [
       {
         "id": 1,
@@ -1046,13 +1064,13 @@ POST /api/v1/transactions
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. Runs inside a single database transaction with `SELECT ... FOR UPDATE` locks on each product row.
+Any authenticated user. Runs inside a single database transaction with `SELECT ... FOR UPDATE` locks on every product row involved.
 
-Request body:
+Body:
 
 | Field         | Type    | Required | Rules                                                         |
 | ------------- | ------- | -------- | ------------------------------------------------------------- |
-| `customer_id` | integer | yes      | Must exist                                                    |
+| `customer_id` | integer | yes      | Must exist and be active                                      |
 | `items`       | array   | yes      | Non-empty array of `{ "product_id": int, "qty": int }`        |
 | `type`        | string  | no       | `sale`, `delivery`, or `return`. Default `sale`.              |
 | `paid_amount` | numeric | no       | Default 0                                                     |
@@ -1075,17 +1093,17 @@ curl -X POST http://localhost:8000/api/v1/transactions \
   }'
 ```
 
-The server will:
+The service:
 
-1. Generate an invoice number in the format `INV-YYYYMMDD-XXXX`.
-2. Iterate over items, lock each product row, and validate stock.
-3. Compute subtotals and total.
-4. Insert the transaction header.
-5. Insert each item and decrement product stock.
-6. Write an entry to `logs`.
-7. Commit.
-
-If any step fails, the transaction is rolled back. Stock is not deducted and no header is created.
+1. Verifies the customer exists and is active.
+2. Aggregates items by `product_id` (so sending `{product 1, qty 2}` twice collapses into `qty 4`).
+3. Generates an invoice number in the form `INV-YYYYMMDD-XXXXXXXXXXXXXXXX` — eight hex bytes, uppercase.
+4. Iterates aggregated items, locks each product row with `FOR UPDATE`, and checks stock.
+5. Computes subtotals and total.
+6. Inserts the transaction header.
+7. Inserts each item, decrements stock, and writes a `stock_movements` row.
+8. Writes an audit log entry.
+9. Commits.
 
 Response `201`:
 
@@ -1095,7 +1113,7 @@ Response `201`:
   "message": "Transaction created successfully",
   "data": {
     "id": 1,
-    "invoice_no": "INV-20260917-8C4A",
+    "invoice_no": "INV-20260917-8C4A2F9D",
     "total_amount": 46000,
     "items_count": 2
   }
@@ -1104,9 +1122,9 @@ Response `201`:
 
 Errors:
 
-- `422` if `customer_id` or `items` are missing or invalid.
+- `422` if `customer_id` or `items` is missing/invalid, or `paid_amount > total_amount`.
 - `404` if a referenced product does not exist.
-- `500` if stock is insufficient. Message is `Insufficient stock for <name>` when `APP_DEBUG=true`.
+- `422` with message `Insufficient stock` if stock is short (message includes the product name when `APP_DEBUG=true`).
 
 ---
 
@@ -1119,28 +1137,20 @@ Authorization: Bearer <token>
 
 Any authenticated user.
 
-Request body:
+Body:
 
 | Field         | Type    | Required | Rules                                        |
 | ------------- | ------- | -------- | -------------------------------------------- |
 | `status`      | string  | yes      | `pending`, `paid`, `partial`, or `cancelled` |
-| `paid_amount` | numeric | no       | –                                            |
+| `paid_amount` | numeric | no       | Must not exceed `total_amount`               |
 
-Response `200`:
-
-```json
-{
-  "success": true,
-  "message": "Transaction status updated",
-  "data": null
-}
-```
+Response `200`: `{ "success": true, "message": "Transaction status updated", "data": null }`
 
 ---
 
 ### Schedule Endpoints
 
-Schedules assign a customer to a courier (user) at a specific future time.
+Schedules assign a customer to a courier (a user) at a future time.
 
 #### List Schedules
 
@@ -1149,7 +1159,7 @@ GET /api/v1/schedules?page=1&per_page=15&status=pending&user_id=2&customer_id=1
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. All filters optional. Ordered by `scheduled_at` descending. The response includes joined `customer_name` and `user_name`.
+Any authenticated user. All filters optional. Ordered by `scheduled_at` descending. Response includes joined `customer_name` and `user_name`.
 
 ---
 
@@ -1160,7 +1170,7 @@ GET /api/v1/schedules/{id}
 Authorization: Bearer <token>
 ```
 
-Any authenticated user. Returns `404` if not found.
+Returns `404` if not found.
 
 ---
 
@@ -1171,26 +1181,20 @@ POST /api/v1/schedules
 Authorization: Bearer <token>
 ```
 
-Request body:
+Body:
 
-| Field          | Type    | Required       |
-| -------------- | ------- | -------------- |
-| `customer_id`  | integer | yes            |
-| `user_id`      | integer | yes            |
-| `scheduled_at` | string  | yes (datetime) |
-| `notes`        | string  | no             |
+| Field          | Type    | Required | Rules                                        |
+| -------------- | ------- | -------- | -------------------------------------------- |
+| `customer_id`  | integer | yes      | Must exist and be active                     |
+| `user_id`      | integer | yes      | Must exist and be active                     |
+| `scheduled_at` | string  | yes      | `YYYY-MM-DD HH:MM:SS`, must be in the future |
+| `notes`        | string  | no       | –                                            |
 
 New schedules default to `pending`.
 
-Response `201`:
+Response `201`: `{ "success": true, "message": "Schedule created", "data": { "id": 1 } }`
 
-```json
-{
-  "success": true,
-  "message": "Schedule created",
-  "data": { "id": 1 }
-}
-```
+Returns `422` if the datetime format is wrong or the time is not in the future. Returns `404` if the customer or user is missing/inactive.
 
 ---
 
@@ -1201,37 +1205,27 @@ PUT /api/v1/schedules/{id}/status
 Authorization: Bearer <token>
 ```
 
-Request body:
+Body:
 
 | Field    | Type   | Required | Rules                                         |
 | -------- | ------ | -------- | --------------------------------------------- |
 | `status` | string | yes      | `pending`, `on_route`, `done`, or `cancelled` |
 
-Response `200`:
-
-```json
-{
-  "success": true,
-  "message": "Schedule status updated",
-  "data": null
-}
-```
-
 ---
 
 ### User Endpoints
 
-All endpoints in this section are admin-only.
+All endpoints here require the `administrator` role.
 
 #### List Users
 
 ```
 GET /api/v1/users?page=1&per_page=15
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
-Returns a paginated list with joined role names.
+Paginated list with joined role names.
 
 ---
 
@@ -1240,10 +1234,10 @@ Returns a paginated list with joined role names.
 ```
 GET /api/v1/users/{id}
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
-Returns the user record with `password_hash` stripped.
+User record with `password_hash` stripped.
 
 ---
 
@@ -1252,12 +1246,10 @@ Returns the user record with `password_hash` stripped.
 ```
 PUT /api/v1/users/{id}
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
-Accepts `name`, `phone`, `role_id`, `is_active`.
-
-Response `200` with `{ "success": true, "message": "User updated", "data": null }`.
+Accepts `name`, `phone`, `role_id`, `is_active`. Setting `role_id` validates that the role exists — you get `422` if it doesn't.
 
 ---
 
@@ -1266,10 +1258,10 @@ Response `200` with `{ "success": true, "message": "User updated", "data": null 
 ```
 DELETE /api/v1/users/{id}
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
-Soft delete: sets `is_active = 0`.
+Soft delete: sets `is_active = 0`. The user can still log in until their access token expires; new logins are refused because `Auth::attempt()` checks `is_active`.
 
 ---
 
@@ -1278,7 +1270,7 @@ Soft delete: sets `is_active = 0`.
 ```
 GET /api/v1/roles
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
 Returns all roles.
@@ -1292,22 +1284,22 @@ Response `200`:
   "data": [
     {
       "id": 1,
-      "name": "admin",
-      "description": "System administrator",
+      "name": "administrator",
+      "description": "System administrator with full access",
       "created_at": "...",
       "updated_at": "..."
     },
     {
       "id": 2,
-      "name": "kurir",
-      "description": "Delivery courier",
+      "name": "agent",
+      "description": "Field agent handling deliveries",
       "created_at": "...",
       "updated_at": "..."
     },
     {
       "id": 3,
-      "name": "pelanggan",
-      "description": "Water depot customer",
+      "name": "customer",
+      "description": "Registered customer account",
       "created_at": "...",
       "updated_at": "..."
     }
@@ -1322,7 +1314,7 @@ Response `200`:
 ```
 GET /api/v1/logs?limit=100
 Authorization: Bearer <token>
-Role: admin
+Role: administrator
 ```
 
 Returns the latest audit logs, joined with user names. `limit` is capped at 500. Default 100.
@@ -1343,7 +1335,7 @@ Response `200`:
       "payload": "{\"email\":\"admin@galonku.com\"}",
       "ip_address": "127.0.0.1",
       "created_at": "2026-09-17 04:30:00",
-      "user_name": "Admin Galonku"
+      "user_name": "Administrator"
     }
   ]
 }
@@ -1359,7 +1351,7 @@ Recorded actions: `register`, `login`, `logout`, `create`, `update`, `delete`, e
 GET /
 ```
 
-Returns application status. No authentication required.
+Public. Returns app status.
 
 Response `200`:
 
@@ -1380,28 +1372,34 @@ Response `200`:
 
 ## Rate Limiting
 
-Rate limiting is applied per endpoint via `RateLimitMiddleware`, declared in the route definition:
+Applied per endpoint via `RateLimitMiddleware`, declared in the route:
 
 ```php
 $router->post('/auth/login', [AuthController::class, 'login'],
     [RateLimitMiddleware::class . ':login:5:60']);
 ```
 
-Three arguments follow the class name: identifier prefix, maximum requests, and window in seconds. The bucket key is `md5(ip:prefix)`. State is stored in `storage/cache/rl_<hash>.json`.
+Three arguments after the class name: identifier prefix, max requests, and window in seconds. The bucket key is `md5(ip:prefix)` — a client on IP A can't exhaust IP B's bucket, and each prefix (endpoint) has its own bucket per IP.
 
-When the limit is exceeded, the server returns `429` with a `Retry-After` header indicating the number of seconds to wait.
+State lives in `storage/cache/rl_<hash>.json`. Writes are guarded by `flock(LOCK_EX)` so concurrent requests don't race. When the limit trips, the server returns `429` with a `Retry-After` header giving seconds to wait.
 
-The cache directory must be writable by the web server user. Add a cron job to periodically clean stale files:
+The cache directory must be writable by the PHP user. Clean stale files periodically:
 
 ```bash
 find storage/cache -name 'rl_*.json' -mmin +60 -delete
+```
+
+Or run the bundled cleanup script:
+
+```bash
+php database/cleanup.php
 ```
 
 ---
 
 ## Database Schema
 
-Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
+Eleven tables, all InnoDB, all `utf8mb4_unicode_ci` (except `migrations`, which uses the connection default).
 
 ### roles
 
@@ -1426,6 +1424,8 @@ Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
 | last_login_at          | TIMESTAMP    | Nullable           |
 | created_at, updated_at | TIMESTAMP    |                    |
 
+Indexes on `role_id` and `is_active`.
+
 ### customers
 
 | Column                 | Type         | Notes  |
@@ -1437,6 +1437,8 @@ Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
 | notes                  | TEXT         |        |
 | is_active              | TINYINT(1)   |        |
 | created_at, updated_at | TIMESTAMP    |        |
+
+Indexes on `is_active` and `name`.
 
 ### products
 
@@ -1450,6 +1452,8 @@ Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
 | stock                  | INT           | CHECK `stock >= 0`                  |
 | is_active              | TINYINT(1)    |                                     |
 | created_at, updated_at | TIMESTAMP     |                                     |
+
+Indexes on `category`, `is_active`, `stock`.
 
 ### transactions
 
@@ -1466,6 +1470,8 @@ Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
 | notes                  | TEXT          |                                           |
 | created_at, updated_at | TIMESTAMP     |                                           |
 
+Indexes on `customer_id`, `user_id`, `status`, `type`, `created_at`.
+
 ### transaction_items
 
 | Column         | Type          | Notes                                     |
@@ -1476,6 +1482,8 @@ Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
 | qty            | INT           | CHECK `qty > 0`                           |
 | unit_price     | DECIMAL(12,2) |                                           |
 | subtotal       | DECIMAL(14,2) |                                           |
+
+Indexes on `transaction_id` and `product_id`.
 
 ### schedules
 
@@ -1488,6 +1496,27 @@ Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
 | status                 | ENUM         | `pending`, `on_route`, `done`, `cancelled` |
 | notes                  | TEXT         |                                            |
 | created_at, updated_at | TIMESTAMP    |                                            |
+
+Indexes on `customer_id`, `user_id`, `status`, `scheduled_at`.
+
+### stock_movements
+
+| Column         | Type         | Notes                                         |
+| -------------- | ------------ | --------------------------------------------- |
+| id             | INT UNSIGNED | PK                                            |
+| product_id     | INT UNSIGNED | FK → products.id                              |
+| user_id        | INT UNSIGNED | FK → users.id, nullable                       |
+| type           | ENUM         | `in`, `out`, `adjustment`                     |
+| qty            | INT          | Always positive; the type indicates direction |
+| stock_before   | INT          |                                               |
+| stock_after    | INT          |                                               |
+| reason         | VARCHAR(255) | Short description                             |
+| reference_type | VARCHAR(50)  | Nullable, e.g. `transaction`                  |
+| reference_id   | INT UNSIGNED | Nullable                                      |
+| notes          | TEXT         | Nullable                                      |
+| created_at     | TIMESTAMP    |                                               |
+
+Indexes on `product_id`, `user_id`, `type`, `(reference_type, reference_id)`, `created_at`.
 
 ### logs
 
@@ -1511,6 +1540,8 @@ Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
 | expires_at | DATETIME        |        |
 | created_at | TIMESTAMP       |        |
 
+Index on `expires_at` for cleanup queries.
+
 ### migrations
 
 | Column      | Type         | Notes              |
@@ -1524,21 +1555,33 @@ Ten tables, all InnoDB, all `utf8mb4_unicode_ci`.
 
 ## Default Accounts
 
-`UserSeeder` creates three accounts. Change these passwords before deploying to production.
+`UserSeeder` creates three accounts. Change these before deploying:
 
-| Email               | Password       | Role      |
-| ------------------- | -------------- | --------- |
-| `admin@galonku.com` | `admin123`     | admin     |
-| `kurir@galonku.com` | `kurir123`     | kurir     |
-| `user@galonku.com`  | `pelanggan123` | pelanggan |
+| Email                  | Password      | Role          |
+| ---------------------- | ------------- | ------------- |
+| `admin@galonku.com`    | `admin123`    | administrator |
+| `agent@galonku.com`    | `agent123`    | agent         |
+| `customer@galonku.com` | `customer123` | customer      |
 
-`ProductSeeder` creates five sample products. `CustomerSeeder` creates three sample customers. `DemoSeeder` creates one sample transaction and one sample schedule, and is idempotent (skips if `transactions` is already populated).
+`ProductSeeder` creates five products:
+
+| SKU           | Name                | Category  | Price     | Stock |
+| ------------- | ------------------- | --------- | --------- | ----- |
+| GLN-AQUA-19L  | Galon Aqua 19L      | galon     | 20000.00  | 50    |
+| GLN-RO-19L    | Galon Isi Ulang 19L | galon     | 6000.00   | 100   |
+| GAS-LPG-3KG   | Gas LPG 3kg         | lain      | 25000.00  | 30    |
+| GAS-LPG-12KG  | Gas LPG 12kg        | lain      | 180000.00 | 15    |
+| AKS-TUTUP-GLN | Tutup Galon         | aksesoris | 5000.00   | 200   |
+
+`CustomerSeeder` creates three customers: Ibu Siti, Pak Budi, and Toko Jaya.
+
+`DemoSeeder` creates one sample transaction (`INV-DEMO-0001`) and one sample schedule. It skips if the demo invoice already exists.
 
 ---
 
 ## Testing
 
-Tests are divided into three suites.
+Three suites:
 
 | Suite       | Location            | Needs DB |
 | ----------- | ------------------- | -------- |
@@ -1552,7 +1595,7 @@ Prepare the test database once:
 APP_ENV=testing php database/db.php fresh --seed
 ```
 
-Then run:
+Run:
 
 ```bash
 composer test              # all suites
@@ -1573,34 +1616,33 @@ vendor/bin/phpunit --filter test_login_success_returns_tokens
 
 Feature and Integration tests extend `Tests\Support\TestCase`, which:
 
-- Enables `Response::$testMode`. In this mode, `Response::json()` throws a `ResponseCaptured` instead of printing and calling `exit`. The HTTP interaction trait catches this and returns a `TestResponse` object.
-- Calls `refreshDatabase()` in `setUp()`. This drops all tables, re-runs all migrations, re-runs all seeders, and clears rate limit cache files.
-- Boots a fresh router by re-requiring `routes/api.php`.
+- Enables `Response::$testMode`. In test mode, `Response::json()` throws a `ResponseCaptured` instead of echoing and calling `exit`. `InteractsWithHttp` catches it and wraps the response in a `TestResponse`.
+- Calls `refreshDatabase()` in `setUp()`. On the first test it drops all tables, re-migrates, and re-seeds. Subsequent tests just start a transaction and roll it back in `tearDown()`, so each test gets a clean slate without re-running migrations.
+- Rebuilds the router by re-requiring `routes/api.php`.
 
-`ActsAsUser` provides `loginAsAdmin()`, `loginAsKurir()`, `loginAsPelanggan()`, and `withAuth()` to build authenticated headers.
+`ActsAsUser` gives you `loginAsAdmin()`, `loginAsKurir()`, `loginAsPelanggan()`, and `withAuth()`.
 
-`InteractsWithHttp` provides `get()`, `post()`, `put()`, `patch()`, and `delete()` helpers.
+`InteractsWithHttp` gives you `get()`, `post()`, `put()`, `patch()`, `delete()`.
 
-`TestResponse` provides assertion helpers: `assertStatus`, `assertOk`, `assertSuccess`, `assertFailed`, `assertUnauthorized`, `assertForbidden`, `assertNotFound`, `assertUnprocessable`, `assertTooManyRequests`, `assertJsonPath`, `assertJsonHas`, and `assertJsonMissing`.
+`TestResponse` provides assertions: `assertStatus`, `assertOk`, `assertSuccess`, `assertFailed`, `assertUnauthorized`, `assertForbidden`, `assertNotFound`, `assertUnprocessable`, `assertTooManyRequests`, `assertJsonPath`, `assertJsonHas`, `assertJsonMissing`, plus `dump()` for debugging.
 
 `InteractsWithDatabase` provides `assertDatabaseHas()` and `assertDatabaseMissing()`.
 
-Unit tests extend `Tests\Support\UnitTestCase`, which does not touch the database.
+Unit tests extend `Tests\Support\UnitTestCase` and never touch the database.
 
-### Test Coverage
+### What's Covered
 
-Current tests cover:
-
-- Registration, login, refresh, logout, and blacklist behavior
-- JWT structure, type discrimination, tampering, and `jti` uniqueness
+- Registration, login, refresh, logout, blacklist behavior
+- JWT structure, type discrimination, tampering, `jti` uniqueness
 - Password hashing and verification
 - Request factory and header extraction
-- Router matching, path parameters, groups, 404, and 405
-- Validation rules
+- Router matching, path parameters, groups, 404, 405
+- Validator rules
 - Role-based access control on every protected endpoint
-- CRUD for products, customers, and schedules
-- Transaction creation with stock deduction, rollback on insufficient stock, and multi-item handling
-- Rate limiting
+- CRUD for products, customers, schedules
+- Stock movements: transaction-driven `out` rows, admin adjustments, listing with filters
+- Transaction creation with stock deduction, rollback on insufficient stock, multi-item handling
+- Rate limiting per IP and per endpoint
 - Audit log creation
 - Full sales flow end-to-end
 - Login/logout/login cycle
@@ -1609,25 +1651,29 @@ Current tests cover:
 
 ## Security Notes
 
-**Password.** Stored with `password_hash()`. Argon2id is preferred; Bcrypt is the fallback. The `password_hash` column is never returned in API responses.
+**Password storage.** `password_hash()` with Argon2id preferred, Bcrypt as fallback. `password_hash` is never serialized in responses.
 
-**JWT.** HS256 with a shared secret. The secret must be at least 32 random bytes. Rotate by updating `.env` and restarting; existing tokens become invalid immediately.
+**JWT.** HS256 with a shared secret. The secret must be at least 32 bytes — the boot check in `public/index.php` refuses to start otherwise. Rotating the secret invalidates all existing tokens immediately.
 
-**Token revocation.** Logout inserts the current access token's `jti` into `jwt_blacklist`. Refresh tokens are not blacklisted. If stricter session control is required, blacklist refresh token `jti` as well on logout.
+**Token revocation.** Logout blacklists the current access token (and refresh token if provided). Blacklist rows are keyed on `jti`, so tokens are unique. Cleanup is a `DELETE` on `expires_at < NOW()`.
 
-**SQL injection.** All queries use prepared statements. Column names passed to `Model::first()` and `Model::where()` are validated against `^[a-zA-Z0-9_]+$`. `paginate()` validates filter keys before interpolating them into the `WHERE` clause.
+**SQL injection.** All queries use prepared statements. Column names passed to `Model::first()`, `Model::where()`, and `Model::paginate()` are validated against `^[a-zA-Z0-9_]+$`. `paginate()` validates the `orderBy` clause with a strict regex before interpolating it.
 
-**Rate limiting.** Login is limited to 5 attempts per minute per IP. Rate limit state files live on disk; ensure the cache directory is not publicly accessible.
+**Stock atomicity.** Every stock change goes through `Database::transaction()` with `SELECT ... FOR UPDATE` locks on the product row. Concurrent sales can't oversell.
 
-**Headers.** Every response includes `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and `X-XSS-Protection: 1; mode=block`.
+**Rate limiting.** Login is capped at 5 attempts per minute per IP. State files live in `storage/cache/` — make sure that directory is not publicly accessible.
 
-**CORS.** Controlled by `CORS_ALLOWED_ORIGINS`. Set this to specific origins in production. The `*` default is only suitable for development.
+**Response headers.** Every response includes `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'`, and `X-XSS-Protection: 1; mode=block`.
 
-**Debug mode.** Never leave `APP_DEBUG=true` in production. When enabled, level 500 responses include raw exception messages that may leak file paths, query fragments, or internal state.
+**CORS.** Controlled by `CORS_ALLOWED_ORIGINS`. Set specific origins in production. The default `*` is fine for local dev but should not ship.
 
-**File permissions.** `storage/` and its subdirectories must be writable by the web server process. Everything else should be read-only. The `public/` directory must contain only `index.php`.
+**Debug mode.** Never leave `APP_DEBUG=true` in production. Level-500 responses include raw exception messages when it's on, which can leak file paths, query fragments, and internal state.
 
-**Environment files.** `.env` and `.env.testing` contain credentials. Ensure they are in `.gitignore` and never committed. Restrict file permissions to `0600` on production systems.
+**File permissions.** `storage/` and its subdirectories need to be writable by the PHP user. Everything else should be read-only. `public/` should contain only `index.php`.
+
+**Environment files.** `.env` and `.env.testing` hold credentials. Add them to `.gitignore`. On production, chmod them to `0600`.
+
+**Production seeding.** `UserSeeder` refuses to run with `APP_ENV=production` unless `SEED_ADMIN_PASSWORD` is set. It does not fall back to the default passwords.
 
 ---
 
@@ -1635,15 +1681,15 @@ Current tests cover:
 
 ### `Cannot connect to MySQL: Access denied for user 'root'@'localhost'`
 
-Database credentials in `.env` are wrong, or the MySQL user does not exist. Verify with a manual login:
+Credentials in `.env` are wrong or the MySQL user doesn't exist. Test manually:
 
 ```bash
 mysql -u galonku -p -h 127.0.0.1 galonku_db
 ```
 
-If this fails, recreate the user as shown in [Installation](#installation).
+If that fails, recreate the user following the [Installation](#installation) section.
 
-The migrator reads `APP_ENV` from the shell, not from `$_ENV`. If `APP_ENV` is set in your shell profile, it affects which `.env` file is loaded. Confirm with:
+The migrator reads `APP_ENV` from the shell, not from `$_ENV`. If your shell profile exports `APP_ENV`, it affects which `.env` file loads. Confirm with:
 
 ```bash
 echo $APP_ENV
@@ -1651,15 +1697,19 @@ echo $APP_ENV
 
 ### `Missing .env.testing in /path/to/backend`
 
-`.env.testing` has not been created. Run `cp .env.testing.example .env.testing` and edit it.
+The test file doesn't exist. Run `cp .env.testing.example .env.testing` and edit it.
+
+### `JWT_SECRET must be set and at least 32 characters long`
+
+The secret in `.env` is missing or too short. Generate one with `php -r "echo bin2hex(random_bytes(32));"` and paste it into `JWT_SECRET`. Same for `.env.testing`.
+
+### `Server misconfigured` on every request
+
+`public/index.php` bails out before booting if it can't find a valid JWT secret. This usually means Dotenv failed to load `.env` — check the file path and permissions.
 
 ### Seeder fails with a foreign key violation
 
-The seeder order was changed, or `DemoSeeder` ran without `UserSeeder`. Restore the seeder order constant in `database/Migrator.php` and re-run:
-
-```bash
-php database/db.php fresh --seed
-```
+A seeder's priority puts it before a table it depends on. Check `priority()` in each seeder file. `DemoSeeder` in particular needs `UserSeeder`, `ProductSeeder`, and `CustomerSeeder` to have run.
 
 ### Rate limit blocks legitimate requests during development
 
@@ -1677,19 +1727,27 @@ RATE_LIMIT_LOGIN=100
 
 ### `Class 'Migrator' not found` in tests
 
-The test suite requires `database/Migrator.php` at runtime via `require_once`. If you move or rename the file, update `tests/Support/Concerns/InteractsWithDatabase.php`.
+The test bootstrap `require_once`s `database/Migrator.php`. If you moved that file, update `tests/Support/Concerns/InteractsWithDatabase.php`.
 
 ### Tests fail because tables already contain data
 
-The test `setUp()` calls `refreshDatabase()`, which drops and recreates everything. If tests still see stale data, verify that the test extends `Tests\Support\TestCase`, not `UnitTestCase`.
+The test `setUp()` calls `refreshDatabase()` which drops and re-creates everything on the first test. If tests still see stale data, confirm your test extends `Tests\Support\TestCase` and not `UnitTestCase`.
 
 ### Response body is empty in tests
 
-Ensure `Response::$testMode` is `true`. This is set in `tests/bootstrap.php` and in `TestCase::setUp()`. If you write a test that bypasses the TestCase framework, set it manually:
+`Response::$testMode` must be `true`. That's set in `tests/bootstrap.php` and again in `TestCase::setUp()`. If you write a test that bypasses `TestCase`, set it manually:
 
 ```php
 \App\Core\Response::$testMode = true;
 ```
+
+### Stock movements aren't being recorded for a transaction
+
+Check that the transaction actually succeeded (look for the `201` response with an `id`). The `StockMovement::create()` calls happen inside `TransactionService::create()`, wrapped in `Database::transaction()`. If anything later in the flow throws, the whole thing rolls back including the movement rows. This is intentional.
+
+### `Insufficient stock` on a transaction you thought would work
+
+The check is `stock < qty` at the moment of the `FOR UPDATE` lock. If another transaction grabbed the lock first and reduced stock below what you need, yours fails. Retry after a moment, or check the stock endpoint for the current value.
 
 ---
 
