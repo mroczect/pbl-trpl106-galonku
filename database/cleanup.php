@@ -1,21 +1,38 @@
 <?php
-require __DIR__ . '/../backend/vendor/autoload.php';
+declare(strict_types=1);
 
-use Dotenv\Dotenv;
-use App\Core\Database;
+require __DIR__ . '/bootstrap.php';
 
-Dotenv::createImmutable(dirname(__DIR__) . '/backend')->safeLoad();
+use Database\Connection;
+use Database\Support\Output;
 
-$pdo = Database::connect();
+ $pdo = Connection::database();
 
-$deleted = $pdo->exec("DELETE FROM jwt_blacklist WHERE expires_at < NOW()");
-echo "Cleaned jwt_blacklist: $deleted rows\n";
+ $deleted = $pdo->exec('DELETE FROM jwt_blacklist WHERE expires_at < NOW()');
+Output::ok('jwt_blacklist: removed ' . (int) $deleted . ' expired entr(ies)');
 
-$cacheDir = __DIR__ . '/../backend/storage/cache';
-$cutoff   = time() - 3600;
+ $cacheDir = dirname(__DIR__) . '/backend/storage/cache';
+ $cutoff   = time() - 3600;
+ $removed  = 0;
 
-foreach (glob($cacheDir . '/rl_*.json') as $f) {
-    if (filemtime($f) < $cutoff) @unlink($f);
+if (is_dir($cacheDir)) {
+    foreach (new DirectoryIterator($cacheDir) as $file) {
+        if ($file->isDot() || !$file->isFile()) {
+            continue;
+        }
+        $filename = $file->getFilename();
+        if (!str_starts_with($filename, 'rl_') || !str_ends_with($filename, '.json')) {
+            continue;
+        }
+        if ($file->getMTime() >= $cutoff) {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (unlink($path)) {
+            $removed++;
+        } else {
+            Output::warn('Failed to remove stale cache file: ' . $path);
+        }
+    }
 }
-
-echo "Cleaned rate limit cache\n";
+Output::ok("rate-limit cache: removed {$removed} stale file(s)");
