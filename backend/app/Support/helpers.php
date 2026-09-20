@@ -25,3 +25,19 @@ if (!function_exists('config')) {
         return $config[$path] ?? $default;
     }
 }
+
+if (!function_exists('env')) {
+    function env(string $key, mixed $default = null): mixed
+    {
+        $v = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+        if ($v === false || $v === null) {
+            return $default;
+        }
+        return match (strtolower((string) $v)) {
+            'true', '(true)'   => true,
+            'false', '(false)' => false,
+            'null', '(null)'   => null,
+            default            => $v,
+        };
+    }
+}
