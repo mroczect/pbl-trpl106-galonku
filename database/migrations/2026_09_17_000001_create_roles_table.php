@@ -1,10 +1,12 @@
 <?php
-require_once __DIR__ . '/_Base.php';
+declare(strict_types=1);
+
+use Database\Migration\Migration;
 
 return new class extends Migration {
     public function up(PDO $pdo): void
     {
-        $this->table($pdo, 'roles', fn() => "
+        $this->createTable($pdo, 'roles', fn() => "
             CREATE TABLE `roles` (
                 `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 `name`        VARCHAR(50) NOT NULL,
@@ -18,6 +20,6 @@ return new class extends Migration {
 
     public function down(PDO $pdo): void
     {
-        $pdo->exec("DROP TABLE IF EXISTS `roles`");
+        $this->dropTable($pdo, 'roles');
     }
 };
