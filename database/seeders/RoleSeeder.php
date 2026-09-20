@@ -1,22 +1,29 @@
 <?php
-require_once __DIR__ . '/Seeder.php';
+declare(strict_types=1);
+
+use Database\Seeder\Seeder;
 
 return new class extends Seeder {
     public function run(PDO $pdo): void
     {
         $roles = [
-            ['id' => 1, 'name' => 'admin',     'description' => 'System administrator'],
-            ['id' => 2, 'name' => 'kurir',     'description' => 'Delivery courier'],
-            ['id' => 3, 'name' => 'pelanggan', 'description' => 'Water depot customer'],
+            ['id' => 1, 'name' => 'administrator', 'description' => 'System administrator with full access'],
+            ['id' => 2, 'name' => 'agent',         'description' => 'Field agent handling deliveries'],
+            ['id' => 3, 'name' => 'customer',      'description' => 'Registered customer account'],
         ];
 
         $stmt = $pdo->prepare(
-            "INSERT INTO roles (id, name, description) VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE description = VALUES(description)"
+            'INSERT INTO roles (id, name, description) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE description = VALUES(description)'
         );
 
         foreach ($roles as $r) {
             $stmt->execute([$r['id'], $r['name'], $r['description']]);
         }
+    }
+
+    public function priority(): int
+    {
+        return 10;
     }
 };
