@@ -5,20 +5,27 @@ use App\Exceptions\ErrorHandler;
 
 class App
 {
+    private static ?self $instance = null;
+    private static bool $booted = false;
     private Router $router;
 
     public static function boot(): self
     {
+        if (self::$booted && self::$instance !== null) {
+            return self::$instance;
+        }
+        self::$booted = true;
+
         $app = new self();
         $app->registerErrorHandler();
         $app->registerCors();
         $app->registerSecurityHeaders();
 
         $app->router = new Router();
-
         $router = $app->router;
         require dirname(__DIR__, 2) . '/routes/api.php';
 
+        self::$instance = $app;
         return $app;
     }
 
@@ -52,6 +59,7 @@ class App
 
         if (isset($_SERVER['HTTP_ORIGIN'])) {
             $requestOrigin = $_SERVER['HTTP_ORIGIN'];
+            header('Vary: Origin');
 
             if (in_array('*', $allowed, true)) {
                 $origin = $requestOrigin;
@@ -63,7 +71,6 @@ class App
 
         if ($origin) {
             header("Access-Control-Allow-Origin: $origin");
-            header('Vary: Origin');
         }
         header("Access-Control-Allow-Methods: {$cors['allowed_methods']}");
         header("Access-Control-Allow-Headers: {$cors['allowed_headers']}");
@@ -84,5 +91,6 @@ class App
         header('X-Frame-Options: DENY');
         header('Referrer-Policy: no-referrer');
         header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
+        header('X-XSS-Protection: 1; mode=block');
     }
 }
